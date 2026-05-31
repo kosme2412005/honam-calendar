@@ -47,7 +47,8 @@
   .brand .logo{width:40px;height:40px;border-radius:11px;background:linear-gradient(135deg,var(--primary),#06b6d4);display:grid;place-items:center;color:#fff;font-weight:800;font-size:12px;letter-spacing:-.5px;box-shadow:0 4px 12px rgba(37,99,235,.3);}
   .brand h1{font-size:16px;margin:0;font-weight:800;letter-spacing:-.3px;}
   .brand p{margin:1px 0 0;font-size:11.5px;color:var(--muted);}
-  .top-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;flex-basis:100%;}
+  .top-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-start;flex-basis:100%;}
+  .sync-mini{font-size:10.5px;padding:3px 9px;}
   .sync{font-size:11.5px;font-weight:700;padding:5px 10px;border-radius:999px;white-space:nowrap;}
   .who{white-space:nowrap;}
   .sync.ok{background:#ecfdf5;color:#059669;}.sync.warn{background:#fef2f2;color:#dc2626;}
@@ -77,8 +78,10 @@
   .room-badge{font-size:11.5px;font-weight:800;background:#0f172a;color:#fff;padding:3px 10px;border-radius:8px;white-space:nowrap;letter-spacing:-.2px;}
   /* 탭+월 네비 중앙 정렬 */
   .trow-nav{justify-content:center;}
+  .trow-tabs + .trow-nav{border-top:none;padding-top:6px;margin-top:6px;}
   /* 분류 설정 톱니바퀴 */
-  .gear-btn{margin-left:auto;width:28px;height:28px;border:1px solid var(--border);background:#fff;border-radius:8px;font-size:14px;color:var(--muted);display:grid;place-items:center;}
+  #catFilters{display:inline-flex;flex-wrap:wrap;gap:7px;align-items:center;vertical-align:middle;}
+  .gear-btn{width:30px;height:30px;border:1px solid var(--border);background:#fff;border-radius:999px;font-size:14px;color:var(--muted);display:inline-grid;place-items:center;flex-shrink:0;}
   .gear-btn:hover{border-color:var(--primary);color:var(--primary);}
   .btn{border:1px solid var(--border-strong);background:#fff;color:var(--text);padding:9px 13px;border-radius:9px;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px;transition:.12s;white-space:nowrap;}
   .btn:hover{background:#f9fafb;border-color:var(--primary);}
@@ -91,8 +94,9 @@
   .toolbar{background:var(--card);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow);padding:12px 14px;margin-bottom:12px;}
   .trow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
   .trow+.trow{margin-top:10px;padding-top:10px;border-top:1px dashed var(--border);}
-  .tabs{display:flex;gap:4px;background:#eef2f7;padding:4px;border-radius:11px;}
-  .tab{padding:7px 13px;border:none;background:transparent;border-radius:8px;font-size:13px;font-weight:700;color:var(--muted);}
+  .tabs{display:flex;gap:4px;background:#eef2f7;padding:4px;border-radius:11px;width:100%;}
+  .trow-tabs{margin-bottom:0;}
+  .tab{flex:1;text-align:center;padding:9px 13px;border:none;background:transparent;border-radius:8px;font-size:13.5px;font-weight:700;color:var(--muted);}
   .tab.active{background:#fff;color:var(--primary);box-shadow:0 1px 3px rgba(0,0,0,.1);}
   .month-nav{display:flex;align-items:center;gap:4px;}
   .month-nav .title{font-size:16px;font-weight:800;min-width:118px;text-align:center;}
@@ -256,13 +260,10 @@
       <div class="logo">중진공</div>
       <div><h1>KOSME 일정·가용인력</h1><p>휴가·출장·회의·연수·교육 한눈에</p></div>
     </div>
+    <span id="syncBadge" class="sync ok sync-mini">● 연결됨</span>
     <button class="btn primary" id="addBtn">＋ 일정</button>
     <div class="top-right">
-      <div class="conn-stack">
-        <span id="syncBadge" class="sync ok">● 연결됨</span>
-        <span id="roomBadge" class="room-badge"></span>
-      </div>
-      <span class="who" id="whoami"></span>
+      <span id="roomBadge" class="room-badge"></span>
       <button class="btn sm" id="roomsBtn">🏠 방 목록</button>
       <button class="btn sm" id="membersBtn">👥 부서원</button>
       <button class="btn sm" id="csvBtn">📑 엑셀</button>
@@ -271,12 +272,14 @@
   </header>
 
   <div class="toolbar">
-    <div class="trow trow-nav">
+    <div class="trow trow-tabs">
       <div class="tabs">
         <button class="tab active" data-view="cal">📅 캘린더</button>
         <button class="tab" data-view="avail">🟢 가용 인력</button>
         <button class="tab" data-view="list">📋 목록</button>
       </div>
+    </div>
+    <div class="trow trow-nav">
       <div class="month-nav" id="monthNav">
         <button class="nav-btn" id="prevM">‹</button>
         <div class="title" id="monthTitle">—</div>
@@ -478,7 +481,7 @@ $('logoutBtn').onclick=async()=>{await supa.auth.signOut();};
 
 supa.auth.onAuthStateChange((_e,sess)=>{
   session=sess;
-  if(sess){ $('whoami').textContent=displayName(sess.user); showRoomView(); }
+  if(sess){ showRoomView(); }
   else { if(channel){supa.removeChannel(channel);channel=null;} $('appView').classList.add('hidden'); $('roomView').classList.add('hidden'); $('authView').classList.remove('hidden'); }
 });
 
@@ -578,13 +581,14 @@ function render(){
   else renderList();
 }
 function renderFilters(){
-  const cf=$('catFilters');cf.innerHTML='';
+  const cf=$('catFilters');const gear=$('catGearBtn');cf.innerHTML='';
   Object.entries(CATEGORIES).forEach(([k,c])=>{
     const on=activeCats.has(k);const b=document.createElement('button');
     b.className='chip-toggle'+(on?' active':'');b.style.background=on?c.color:'';
     b.innerHTML=`<span class="dot" style="background:${on?'#fff':c.color}"></span>${c.label}`;
     b.onclick=()=>{on?activeCats.delete(k):activeCats.add(k);render();};cf.appendChild(b);
   });
+  if(gear)cf.appendChild(gear);
   const mf=$('memberFilters');mf.innerHTML='';
   const all=document.createElement('button');all.className='chip-toggle member-chip'+(activeMembers.size==0?' active':'');all.textContent='전체';all.onclick=()=>{activeMembers.clear();render();};mf.appendChild(all);
   state.members.forEach(m=>{const on=activeMembers.has(m.id);const b=document.createElement('button');b.className='chip-toggle member-chip'+(on?' active':'');b.textContent=m.name;b.onclick=()=>{on?activeMembers.delete(m.id):activeMembers.add(m.id);render();};mf.appendChild(b);});
@@ -776,16 +780,6 @@ $('addBtn').onclick=()=>openEvent(null);
 $('membersBtn').onclick=()=>{renderMemberMgmt();showOv('memberOverlay');};
 $('csvBtn').onclick=()=>{$('csvMsg').textContent='';showOv('csvOverlay');};
 $('availDate').onchange=()=>renderAvail();
-/* 이름 클릭 → 표시 이름 변경(기존 계정도 이름 설정 가능) */
-$('whoami').style.cursor='pointer';$('whoami').title='클릭하면 이름 변경';
-$('whoami').onclick=async()=>{
-  const name=prompt('표시할 이름을 입력하세요',displayName(session.user));
-  if(name===null||!name.trim())return;
-  const{error}=await supa.auth.updateUser({data:{display_name:name.trim()}});
-  if(error)return alert('변경 실패: '+error.message);
-  const{data}=await supa.auth.getSession();session=data.session;
-  $('whoami').textContent=displayName(session.user);
-};
 
 /* 방 화면 버튼 + 설치 프롬프트 */
 $('roomsBtn').onclick=()=>showRoomView();
@@ -829,7 +823,7 @@ $('catReset').onclick=()=>{localStorage.removeItem(CAT_LABELS_KEY);applyCatLabel
 if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{});});}
 
 /* 시작: 세션 확인 */
-(async()=>{const{data}=await supa.auth.getSession();if(data.session){session=data.session;$('whoami').textContent=displayName(session.user);showRoomView();}})();
+(async()=>{const{data}=await supa.auth.getSession();if(data.session){session=data.session;showRoomView();}})();
 </script>
 </body>
 </html>
