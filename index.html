@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default" />
 <meta name="apple-mobile-web-app-title" content="KOSME 일정" />
 <meta name="mobile-web-app-capable" content="yes" />
-<title>KOSME 일정·가용인력</title>
+<title>KOSME 캘린더</title>
 <style>
   :root{
     --primary:#2563eb;--primary-dark:#1d4ed8;--bg:#f4f6fb;--card:#fff;--text:#1f2937;--muted:#6b7280;
@@ -199,7 +199,7 @@
 <div id="authView" class="auth-wrap">
   <div class="auth-card">
     <div class="logo">중진공</div>
-    <h1>KOSME 일정·가용인력</h1>
+    <h1>KOSME 캘린더</h1>
     <p class="sub">부서 로그인</p>
     <label>이름 <span style="color:#9aa3af;font-weight:400">(회원가입 시 입력)</span></label>
     <input type="text" id="authName" placeholder="예: 홍길동" autocomplete="name" />
@@ -222,7 +222,7 @@
 <div id="roomView" class="hidden">
   <div class="room-wrap">
     <header class="room-head">
-      <div class="brand"><div class="logo">중진공</div><div><h1>KOSME 일정·가용인력</h1><p id="roomHello"></p></div></div>
+      <div class="brand"><div class="logo">중진공</div><div><h1>KOSME 캘린더</h1><p id="roomHello"></p></div></div>
       <div class="room-actions">
         <button class="btn sm" id="installBtn" style="display:none">📲 앱 설치</button>
         <button class="btn sm" id="logoutBtn2">로그아웃</button>
@@ -258,7 +258,7 @@
   <header class="top">
     <div class="brand">
       <div class="logo">중진공</div>
-      <div><h1>KOSME 일정·가용인력</h1><p>휴가·출장·회의·연수·교육 한눈에</p></div>
+      <div><h1>KOSME 캘린더</h1><p>휴가·출장·회의·연수·교육 한눈에</p></div>
     </div>
     <span id="syncBadge" class="sync ok sync-mini">● 연결됨</span>
     <button class="btn primary" id="addBtn">＋ 일정</button>
@@ -404,7 +404,7 @@
   <div class="modal">
     <div class="modal-head"><h3>분류 이름 설정 (선택)</h3><button class="x" data-close>×</button></div>
     <div class="modal-body">
-      <p style="font-size:12.5px;color:var(--muted);margin:0 0 12px;line-height:1.6;">분류 이름을 원하는 대로 바꿀 수 있어요(이 기기에 저장). 색상은 유지됩니다.</p>
+      <p style="font-size:12.5px;color:var(--muted);margin:0 0 12px;line-height:1.6;">분류를 <b>추가·삭제·이름변경</b>하고 색상도 고를 수 있어요(이 기기에 저장). 맨 아래에서 새 분류를 추가하세요.</p>
       <div id="catSettingsList"></div>
     </div>
     <div class="modal-foot"><button class="btn" id="catReset">기본값</button><button class="btn" data-close>취소</button><button class="btn primary" id="catSave">저장</button></div>
@@ -418,20 +418,29 @@ const SUPABASE_URL = 'https://shbhyaoelamnmmyrwecb.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNoYmh5YW9lbGFtbm1teXJ3ZWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAyMDAwODgsImV4cCI6MjA5NTc3NjA4OH0.8PbkYmH-wOGC6L2zWyZOzbmrm1rZ_YJR_Y9CzvbW6RA';
 const supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const CATEGORIES = {
-  vacation:{label:'휴가',color:'#10b981'}, trip:{label:'출장',color:'#3b82f6'},
-  meeting:{label:'회의',color:'#8b5cf6'}, training_op:{label:'연수운영',color:'#f59e0b'},
-  education:{label:'교육수강',color:'#06b6d4'}, event:{label:'행사',color:'#ec4899'}, etc:{label:'기타',color:'#64748b'},
-};
-let LABEL2TYPE = {};
-const DEFAULT_CAT_LABELS=Object.fromEntries(Object.entries(CATEGORIES).map(([k,c])=>[k,c.label]));
-const CAT_LABELS_KEY='kosme_cat_labels';
-function applyCatLabels(){
-  let ov={};try{ov=JSON.parse(localStorage.getItem(CAT_LABELS_KEY)||'{}');}catch(e){}
-  Object.keys(CATEGORIES).forEach(k=>{CATEGORIES[k].label=(ov[k]&&String(ov[k]).trim())||DEFAULT_CAT_LABELS[k];});
+const DEFAULT_CATEGORIES=[
+  {key:'vacation',label:'휴가',color:'#10b981'},
+  {key:'trip',label:'출장',color:'#3b82f6'},
+  {key:'meeting',label:'회의',color:'#8b5cf6'},
+  {key:'training_op',label:'연수운영',color:'#f59e0b'},
+  {key:'education',label:'교육수강',color:'#06b6d4'},
+  {key:'event',label:'행사',color:'#ec4899'},
+  {key:'etc',label:'기타',color:'#64748b'},
+];
+const CAT_KEY='kosme_categories';
+let CATEGORIES={}, LABEL2TYPE={};
+function getCatArray(){
+  let arr;try{arr=JSON.parse(localStorage.getItem(CAT_KEY));}catch(e){}
+  if(!Array.isArray(arr)||!arr.length)arr=DEFAULT_CATEGORIES.map(c=>({...c}));
+  return arr.filter(c=>c&&c.key&&c.label&&c.color);
+}
+function loadCategories(){
+  CATEGORIES={};getCatArray().forEach(c=>{CATEGORIES[c.key]={label:c.label,color:c.color};});
   LABEL2TYPE=Object.fromEntries(Object.entries(CATEGORIES).map(([k,v])=>[v.label,k]));
 }
-applyCatLabels();
+function saveCategories(arr){localStorage.setItem(CAT_KEY,JSON.stringify(arr));loadCategories();}
+loadCategories();
+function cat(t){return CATEGORIES[t]||{label:t||'기타',color:'#94a3b8'};}
 const STATUS={tentative:'예정',confirmed:'확정',cancelled:'폐강'};
 
 /* ===== 상태 ===== */
@@ -599,7 +608,7 @@ function renderLegend(){
   const h=document.createElement('div');h.className='hint';h.textContent='점선=예정 · 취소선=폐강 · 날짜 클릭=추가';lg.appendChild(h);
 }
 function makeChip(e){
-  const c=CATEGORIES[e.type];const chip=document.createElement('div');
+  const c=cat(e.type);const chip=document.createElement('div');
   chip.className='evt'+(e.status=='tentative'?' tentative':'')+(e.status=='cancelled'?' cancelled':'');
   chip.style.background=c.color;
   const t=e.time_mode=='range'&&e.start_time?e.start_time.slice(0,5)+' ':'';
@@ -629,8 +638,7 @@ function dayStatus(memberId,ymd){
   const evs=state.events.filter(e=>e.member_id==memberId&&e.status!='cancelled'&&e.start_date<=ymd&&ymd<=e.end_date);
   if(evs.length==0)return{k:'free',label:'가용',detail:''};
   const allDay=evs.find(e=>e.time_mode=='allDay');
-  const lead=evs[0];const cat=CATEGORIES[lead.type];
-  const detail=evs.map(e=>`${CATEGORIES[e.type].label}${e.sub_type?'·'+e.sub_type:''} ${e.title}${e.location&&e.location!='연수원'?'@'+e.location:''}`).join(', ');
+  const detail=evs.map(e=>`${cat(e.type).label}${e.sub_type?'·'+e.sub_type:''} ${e.title}${e.location&&e.location!='연수원'?'@'+e.location:''}`).join(', ');
   if(allDay)return{k:'busy',label:'불가',detail};
   return{k:'partial',label:'부분',detail};
 }
@@ -655,7 +663,7 @@ function renderList(){
     const wrap=document.createElement('div');wrap.className='list-day';
     wrap.innerHTML=`<h4>${mo+1}월 ${dd}일 (${'일월화수목금토'[d.getDay()]})</h4>`;
     evs.forEach(e=>{
-      const c=CATEGORIES[e.type];const row=document.createElement('div');row.className='list-evt';
+      const c=cat(e.type);const row=document.createElement('div');row.className='list-evt';
       const when=e.time_mode=='allDay'?'종일':(e.time_mode=='am'?'오전':(e.time_mode=='pm'?'오후':`${(e.start_time||'').slice(0,5)}~${(e.end_time||'').slice(0,5)}`));
       row.innerHTML=`<div class="bar" style="background:${c.color}"></div><div class="meta"><div class="t">${memberName(e.member_id)} · ${e.title} ${e.status!='confirmed'?'<span style="color:#9aa3af">('+STATUS[e.status]+')</span>':''}</div><div class="s">${when} · ${e.location||''}${e.memo?' · '+e.memo:''}</div></div><span class="tag" style="background:${c.color}">${c.label}</span>`;
       row.onclick=()=>openEvent(e.id);wrap.appendChild(row);
@@ -799,25 +807,38 @@ window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredIns
 $('installBtn').onclick=async()=>{if(!deferredInstallPrompt)return;deferredInstallPrompt.prompt();try{await deferredInstallPrompt.userChoice;}catch(e){}deferredInstallPrompt=null;$('installBtn').style.display='none';};
 (function(){const ios=/iphone|ipad|ipod/i.test(navigator.userAgent);const standalone=window.navigator.standalone||window.matchMedia('(display-mode: standalone)').matches;if(ios&&!standalone)$('iosHint').classList.remove('hidden');})();
 
-/* 분류 이름 설정(톱니바퀴) */
-$('catGearBtn').onclick=()=>{
+/* 분류 설정(톱니): 이름변경·삭제·추가 */
+let editCats=[];
+function renderCatEditor(){
   const list=$('catSettingsList');list.innerHTML='';
-  let ov={};try{ov=JSON.parse(localStorage.getItem(CAT_LABELS_KEY)||'{}');}catch(e){}
-  Object.entries(DEFAULT_CAT_LABELS).forEach(([k,def])=>{
-    const row=document.createElement('div');row.className='field';
-    row.innerHTML=`<label><span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:${CATEGORIES[k].color};margin-right:6px;vertical-align:-1px"></span>${def}</label>`;
-    const inp=document.createElement('input');inp.type='text';inp.dataset.cat=k;inp.value=ov[k]||'';inp.placeholder=def;
-    row.appendChild(inp);list.appendChild(row);
+  editCats.forEach((c,i)=>{
+    const row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:8px;margin-bottom:8px;';
+    const color=document.createElement('input');color.type='color';color.value=c.color;color.style.cssText='width:34px;height:34px;border:1px solid var(--border-strong);border-radius:8px;padding:2px;flex-shrink:0;';
+    color.oninput=()=>{editCats[i].color=color.value;};
+    const label=document.createElement('input');label.type='text';label.value=c.label;label.placeholder='분류 이름';label.style.cssText='flex:1;padding:9px 11px;border:1.5px solid var(--border-strong);border-radius:8px;font-size:13.5px;';
+    label.oninput=()=>{editCats[i].label=label.value;};
+    const del=document.createElement('button');del.className='btn danger sm';del.textContent='삭제';del.style.flexShrink='0';
+    del.onclick=()=>{if(editCats.length<=1){alert('분류는 최소 1개는 있어야 합니다');return;}editCats.splice(i,1);renderCatEditor();};
+    row.appendChild(color);row.appendChild(label);row.appendChild(del);list.appendChild(row);
   });
-  showOv('catSettingsOverlay');
-};
+  const add=document.createElement('div');
+  add.style.cssText='display:flex;align-items:center;gap:8px;margin-top:12px;padding-top:12px;border-top:1px dashed var(--border);';
+  const ac=document.createElement('input');ac.type='color';ac.value='#0ea5e9';ac.style.cssText='width:34px;height:34px;border:1px solid var(--border-strong);border-radius:8px;padding:2px;flex-shrink:0;';
+  const al=document.createElement('input');al.type='text';al.placeholder='새 분류 이름 추가';al.style.cssText='flex:1;padding:9px 11px;border:1.5px solid var(--border-strong);border-radius:8px;font-size:13.5px;';
+  const ab=document.createElement('button');ab.className='btn primary sm';ab.textContent='＋ 추가';ab.style.flexShrink='0';
+  ab.onclick=()=>{const v=al.value.trim();if(!v){alert('새 분류 이름을 입력하세요');return;}editCats.push({key:'c'+Math.random().toString(36).slice(2,7),label:v,color:ac.value});renderCatEditor();};
+  add.appendChild(ac);add.appendChild(al);add.appendChild(ab);list.appendChild(add);
+}
+$('catGearBtn').onclick=()=>{editCats=getCatArray().map(c=>({...c}));renderCatEditor();showOv('catSettingsOverlay');};
 $('catSave').onclick=()=>{
-  const ov={};
-  $('catSettingsList').querySelectorAll('input[data-cat]').forEach(inp=>{const v=inp.value.trim();if(v&&v!==DEFAULT_CAT_LABELS[inp.dataset.cat])ov[inp.dataset.cat]=v;});
-  localStorage.setItem(CAT_LABELS_KEY,JSON.stringify(ov));
-  applyCatLabels();closeOv('catSettingsOverlay');render();
+  const arr=editCats.map(c=>({key:c.key,label:String(c.label||'').trim(),color:c.color})).filter(c=>c.label);
+  if(!arr.length){alert('분류는 최소 1개는 있어야 합니다');return;}
+  saveCategories(arr);
+  activeCats=new Set(Object.keys(CATEGORIES));
+  closeOv('catSettingsOverlay');render();
 };
-$('catReset').onclick=()=>{localStorage.removeItem(CAT_LABELS_KEY);applyCatLabels();closeOv('catSettingsOverlay');render();};
+$('catReset').onclick=()=>{if(!confirm('분류를 기본값으로 되돌릴까요?'))return;localStorage.removeItem(CAT_KEY);loadCategories();activeCats=new Set(Object.keys(CATEGORIES));closeOv('catSettingsOverlay');render();};
 
 /* PWA: 서비스워커 등록(설치 가능·앱처럼 실행) */
 if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{});});}
