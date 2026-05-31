@@ -52,6 +52,26 @@
   .who{white-space:nowrap;}
   .sync.ok{background:#ecfdf5;color:#059669;}.sync.warn{background:#fef2f2;color:#dc2626;}
   .who{font-size:12px;color:var(--muted);}
+  /* 방 선택 화면 */
+  .room-wrap{max-width:680px;margin:0 auto;padding:18px 18px 60px;}
+  .room-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap;}
+  .room-actions{display:flex;gap:8px;}
+  .ios-hint{background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af;font-size:12.5px;padding:10px 14px;border-radius:11px;margin-bottom:12px;}
+  .room-card{background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);padding:18px;}
+  .room-card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+  .room-card-head h3{margin:0;font-size:16px;font-weight:800;}
+  .room-divider{font-size:12px;font-weight:800;color:var(--muted);margin:18px 0 10px;}
+  .room-search{width:100%;padding:10px 13px;border:1.5px solid var(--border-strong);border-radius:10px;font-size:14px;margin-bottom:10px;}
+  .room-search:focus{outline:none;border-color:var(--primary);}
+  .room-item{display:flex;align-items:center;gap:12px;padding:13px 14px;border:1.5px solid var(--border);border-radius:12px;margin-bottom:9px;transition:.12s;}
+  .room-item:hover{border-color:var(--primary);background:#f6f9ff;cursor:pointer;}
+  .room-item .ricon{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,var(--primary),#06b6d4);display:grid;place-items:center;color:#fff;font-weight:800;font-size:14px;flex-shrink:0;}
+  .room-item .rmeta{flex:1;min-width:0;}
+  .room-item .rname{font-weight:700;font-size:14.5px;}
+  .room-item .rsub{font-size:12px;color:var(--muted);margin-top:2px;}
+  .room-item .rgo{font-size:12px;font-weight:800;color:var(--primary);}
+  .room-item.mine{border-color:#a7f3d0;background:#f0fdf9;}
+  .room-empty{color:var(--muted);font-size:13px;text-align:center;padding:20px 0;}
   .btn{border:1px solid var(--border-strong);background:#fff;color:var(--text);padding:9px 13px;border-radius:9px;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px;transition:.12s;white-space:nowrap;}
   .btn:hover{background:#f9fafb;border-color:var(--primary);}
   .btn.primary{background:var(--primary);color:#fff;border-color:var(--primary);}
@@ -171,6 +191,8 @@
     <p class="sub">부서 로그인</p>
     <label>이름 <span style="color:#9aa3af;font-weight:400">(회원가입 시 입력)</span></label>
     <input type="text" id="authName" placeholder="예: 홍길동" autocomplete="name" />
+    <label>부서명 <span style="color:#9aa3af;font-weight:400">(회원가입 시 입력)</span></label>
+    <input type="text" id="authDept" placeholder="예: 기획운영부" />
     <label>이메일</label>
     <input type="email" id="authEmail" placeholder="email@example.com" autocomplete="username" />
     <label>비밀번호</label>
@@ -184,17 +206,53 @@
   </div>
 </div>
 
+<!-- 방 선택 화면 -->
+<div id="roomView" class="hidden">
+  <div class="room-wrap">
+    <header class="room-head">
+      <div class="brand"><div class="logo">중진공</div><div><h1>KOSME 일정·가용인력</h1><p id="roomHello"></p></div></div>
+      <div class="room-actions">
+        <button class="btn sm" id="installBtn" style="display:none">📲 앱 설치</button>
+        <button class="btn sm" id="logoutBtn2">로그아웃</button>
+      </div>
+    </header>
+    <div id="iosHint" class="ios-hint hidden">📲 아이폰: 하단 <b>공유</b> → <b>홈 화면에 추가</b>로 앱처럼 쓸 수 있어요</div>
+    <div class="room-card">
+      <div class="room-card-head"><h3>부서 공간 선택</h3><button class="btn primary sm" id="createRoomBtn">＋ 방 만들기</button></div>
+      <div id="myRoomsWrap"></div>
+      <div class="room-divider">전체 부서 방</div>
+      <input type="text" id="roomSearch" class="room-search" placeholder="부서명 검색" />
+      <div id="roomList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 방 만들기 모달 -->
+<div class="overlay" id="createRoomOverlay">
+  <div class="modal">
+    <div class="modal-head"><h3>방 만들기</h3><button class="x" data-close>×</button></div>
+    <div class="modal-body">
+      <p style="font-size:12.5px;color:var(--muted);margin:0 0 12px;line-height:1.6;">부서 공간을 새로 만듭니다. 비밀번호는 부서원에게 공유해 입장하게 하세요.</p>
+      <div class="field"><label>부서명(방 이름)</label><input type="text" id="crName" placeholder="예: 기획운영부" /></div>
+      <div class="field"><label>입장 비밀번호</label><input type="password" id="crPw" placeholder="부서원과 공유할 비밀번호" /></div>
+      <div id="crMsg" style="font-size:12.5px;min-height:18px;color:#dc2626;"></div>
+    </div>
+    <div class="modal-foot"><button class="btn" data-close>취소</button><button class="btn primary" id="crSave">만들기</button></div>
+  </div>
+</div>
+
 <!-- 앱 화면 -->
 <div id="appView" class="app hidden">
   <header class="top">
     <div class="brand">
       <div class="logo">중진공</div>
-      <div><h1>KOSME 일정·가용인력</h1><p>휴가·출장·회의·연수·교육 한눈에</p></div>
+      <div><h1>KOSME 일정·가용인력</h1><p id="roomName">📁 부서 공간</p></div>
     </div>
     <button class="btn primary" id="addBtn">＋ 일정</button>
     <div class="top-right">
       <span id="syncBadge" class="sync ok">● 연결됨</span>
       <span class="who" id="whoami"></span>
+      <button class="btn sm" id="roomsBtn">🏠 방 목록</button>
       <button class="btn sm" id="membersBtn">👥 부서원</button>
       <button class="btn sm" id="csvBtn">📑 엑셀</button>
       <button class="btn sm" id="logoutBtn">로그아웃</button>
@@ -352,6 +410,9 @@ let session=null;
 /* 권한: 관리자 이메일은 전체 권한, 그 외는 본인 일정만 */
 const ADMIN_EMAILS=['kosme2412005@gmail.com'];
 let isAdmin=false, myMemberId=null, evtReadOnly=false;
+/* 멀티테넌트: 현재 입장한 방 */
+let currentRoomId=null, currentRoomName='';
+let deferredInstallPrompt=null;
 
 /* ===== 유틸 ===== */
 const pad=n=>String(n).padStart(2,'0');
@@ -373,11 +434,12 @@ $('loginBtn').onclick=async()=>{
 };
 $('signupBtn').onclick=async()=>{
   const name=$('authName').value.trim();
+  const dept=$('authDept').value.trim();
   const email=$('authEmail').value.trim(),password=$('authPw').value;
   if(!name){authMsg('회원가입 시 이름을 입력하세요','err');return;}
   if(!email||password.length<6){authMsg('이메일과 6자 이상 비밀번호를 입력하세요','err');return;}
   authMsg('가입 중…');
-  const{data,error}=await supa.auth.signUp({email,password,options:{data:{display_name:name}}});
+  const{data,error}=await supa.auth.signUp({email,password,options:{data:{display_name:name,dept:dept}}});
   if(error){authMsg('가입 실패: '+error.message,'err');return;}
   if(data.session)authMsg('가입 완료! 로그인됩니다','ok');
   else authMsg('가입 요청됨. 이메일 확인이 필요할 수 있어요(관리자: 이메일 확인 끄기 권장). 안내대로 로그인하세요','ok');
@@ -386,43 +448,83 @@ $('logoutBtn').onclick=async()=>{await supa.auth.signOut();};
 
 supa.auth.onAuthStateChange((_e,sess)=>{
   session=sess;
-  if(sess){ $('authView').classList.add('hidden'); $('appView').classList.remove('hidden'); $('whoami').textContent=displayName(sess.user); bootApp(); }
-  else { $('appView').classList.add('hidden'); $('authView').classList.remove('hidden'); }
+  if(sess){ $('whoami').textContent=displayName(sess.user); showRoomView(); }
+  else { if(channel){supa.removeChannel(channel);channel=null;} $('appView').classList.add('hidden'); $('roomView').classList.add('hidden'); $('authView').classList.remove('hidden'); }
 });
 
-/* ===== 데이터 ===== */
-let booted=false, channel=null;
-async function bootApp(){
-  if(booted)return; booted=true;
+/* ===== 방 선택 ===== */
+let channel=null, allRooms=[], myRoomIds=new Set();
+async function showRoomView(){
+  if(channel){supa.removeChannel(channel);channel=null;}
+  currentRoomId=null;
+  $('authView').classList.add('hidden');$('appView').classList.add('hidden');$('roomView').classList.remove('hidden');
+  $('roomHello').textContent=displayName(session.user)+'님, 들어갈 부서 공간을 선택하세요';
+  await loadRooms();
+}
+async function loadRooms(){
+  const [{data:mine},{data:all}]=await Promise.all([supa.rpc('my_rooms'),supa.rpc('list_rooms')]);
+  myRoomIds=new Set((mine||[]).map(r=>r.id));
+  allRooms=all||[];
+  renderRooms();
+}
+function roomItem(r,mine){
+  const d=document.createElement('div');d.className='room-item'+(mine?' mine':'');
+  d.innerHTML=`<div class="ricon">${(r.name||'?').slice(0,2)}</div>
+    <div class="rmeta"><div class="rname">${r.name}</div><div class="rsub">${r.member_count||0}명 참여</div></div>
+    <div class="rgo">${mine?'입장 ›':'🔒 입장'}</div>`;
+  d.onclick=()=>mine?enterRoom(r.id,r.name):promptJoin(r);
+  return d;
+}
+function renderRooms(){
+  const mw=$('myRoomsWrap');mw.innerHTML='';
+  const mine=allRooms.filter(r=>myRoomIds.has(r.id));
+  if(mine.length)mine.forEach(r=>mw.appendChild(roomItem(r,true)));
+  else mw.innerHTML='<div class="room-empty">참여한 방이 없습니다. 아래에서 방을 선택하거나 [＋ 방 만들기]를 누르세요.</div>';
+  const q=($('roomSearch').value||'').trim();
+  const list=$('roomList');list.innerHTML='';
+  const others=allRooms.filter(r=>!myRoomIds.has(r.id)&&(!q||r.name.includes(q)));
+  if(!others.length)list.innerHTML='<div class="room-empty">방이 없습니다.</div>';
+  else others.forEach(r=>list.appendChild(roomItem(r,false)));
+}
+async function promptJoin(r){
+  const pw=prompt(`'${r.name}' 방 입장 비밀번호를 입력하세요`);
+  if(pw===null)return;
+  const{data,error}=await supa.rpc('join_room',{p_room_id:r.id,p_password:pw,p_my_name:displayName(session.user)});
+  if(error)return alert('입장 실패: '+error.message);
+  if(!data)return alert('비밀번호가 올바르지 않습니다.');
+  myRoomIds.add(r.id);enterRoom(r.id,r.name);
+}
+async function enterRoom(roomId,roomName){
+  currentRoomId=roomId;currentRoomName=roomName;
+  state={members:[],events:[]};activeCats=new Set(Object.keys(CATEGORIES));activeMembers=new Set();curView='cal';viewDate=new Date();
+  $('roomView').classList.add('hidden');$('appView').classList.remove('hidden');
+  $('roomName').textContent='📁 '+roomName;
   $('availDate').value=toYMD(new Date());
   await Promise.all([loadMembers(),loadEvents()]);
   await ensureMyMember();
   subscribe();
   render();
 }
-/* 로그인 사용자를 부서원과 연결(본인 식별) + 관리자 권한 판정 */
+
+/* ===== 데이터 (현재 방으로 스코프) ===== */
 async function ensureMyMember(){
-  isAdmin=ADMIN_EMAILS.includes((session.user.email||'').toLowerCase());
-  /* 부서원 관리·엑셀 일괄등록은 관리자 전용 */
-  $('membersBtn').style.display=isAdmin?'inline-flex':'none';
-  $('csvBtn').style.display=isAdmin?'inline-flex':'none';
-  if(isAdmin){myMemberId=null;return;}   // 관리자는 전체 권한(특정 부서원에 묶지 않음)
-  const myName=displayName(session.user);
+  const controller=ADMIN_EMAILS.includes((session.user.email||'').toLowerCase());
   let me=state.members.find(m=>m.auth_id===session.user.id);
   if(!me){
-    const cand=state.members.find(m=>m.name===myName&&!m.auth_id);
-    if(cand){await supa.from('members').update({auth_id:session.user.id}).eq('id',cand.id);me=cand;await loadMembers();}
-  }
-  if(!me){
-    const{data,error}=await supa.from('members').insert({name:myName,auth_id:session.user.id}).select().single();
-    if(!error&&data){me=data;await loadMembers();}
+    const cand=state.members.find(m=>m.name===displayName(session.user)&&!m.auth_id);
+    if(cand){await supa.from('members').update({auth_id:session.user.id}).eq('id',cand.id);await loadMembers();me=state.members.find(m=>m.auth_id===session.user.id);}
   }
   myMemberId=me?me.id:null;
+  isAdmin=controller||(!!me&&me.role==='admin');
+  /* 부서원 관리·엑셀 일괄등록은 방 관리자 전용 */
+  $('membersBtn').style.display=isAdmin?'inline-flex':'none';
+  $('csvBtn').style.display=isAdmin?'inline-flex':'none';
 }
-async function loadMembers(){const{data}=await supa.from('members').select('*').order('name');state.members=data||[];}
-async function loadEvents(){const{data}=await supa.from('events').select('*').order('start_date');state.events=data||[];}
+async function loadMembers(){const{data}=await supa.from('members').select('*').eq('room_id',currentRoomId).order('name');state.members=data||[];}
+async function loadEvents(){const{data}=await supa.from('events').select('*').eq('room_id',currentRoomId).order('start_date');state.events=data||[];}
 function subscribe(){
-  channel=supa.channel('rt')
+  if(channel){supa.removeChannel(channel);channel=null;}
+  channel=supa.channel('rt-'+currentRoomId)
     .on('postgres_changes',{event:'*',schema:'public',table:'events'},async()=>{await loadEvents();render();})
     .on('postgres_changes',{event:'*',schema:'public',table:'members'},async()=>{await loadMembers();render();})
     .subscribe(s=>{ if(s==='SUBSCRIBED')setSync('연결됨'); else if(s==='CHANNEL_ERROR'||s==='TIMED_OUT')setSync('재연결 중…',true); });
@@ -572,7 +674,7 @@ $('evtSave').onclick=async()=>{
   if(!title)return alert('제목을 입력하세요');if(!s||!en)return alert('날짜를 입력하세요');
   if(en<s){const t=s;s=en;en=t;}
   const range=pickedTime=='range';
-  const payload={member_id:isAdmin?$('evtMember').value:myMemberId,type:pickedCat,sub_type:pickedCat=='trip'?$('evtSubType').value:null,
+  const payload={room_id:currentRoomId,member_id:isAdmin?$('evtMember').value:myMemberId,type:pickedCat,sub_type:pickedCat=='trip'?$('evtSubType').value:null,
     title,location:$('evtLocation').value.trim()||'연수원',start_date:s,end_date:en,time_mode:pickedTime,
     start_time:range?$('evtStartTime').value:null,end_time:range?$('evtEndTime').value:null,
     status:pickedStatus,memo:$('evtMemo').value.trim(),updated_by:session.user.id};
@@ -599,7 +701,7 @@ function renderMemberMgmt(){
     it.appendChild(del);list.appendChild(it);
   });
 }
-$('addMemberBtn').onclick=async()=>{const name=$('newMemberName').value.trim();const team=$('newMemberTeam').value.trim();if(!name)return alert('이름을 입력하세요');const{error}=await supa.from('members').insert({name,team});if(error)return alert('추가 실패: '+error.message);$('newMemberName').value='';$('newMemberTeam').value='';await loadMembers();renderMemberMgmt();render();};
+$('addMemberBtn').onclick=async()=>{const name=$('newMemberName').value.trim();const team=$('newMemberTeam').value.trim();if(!name)return alert('이름을 입력하세요');const{error}=await supa.from('members').insert({name,team,room_id:currentRoomId});if(error)return alert('추가 실패: '+error.message);$('newMemberName').value='';$('newMemberTeam').value='';await loadMembers();renderMemberMgmt();render();};
 
 /* ===== CSV ===== */
 $('csvTemplate').onclick=()=>{
@@ -620,7 +722,7 @@ $('csvFile').onchange=ev=>{
         if(!m){errs.push(`'${name}' 부서원 없음`);continue;}
         const type=LABEL2TYPE[typeLabel];if(!type){errs.push(`'${typeLabel}' 분류 오류`);continue;}
         if(!title||!start){errs.push(`제목/시작일 누락: ${line}`);continue;}
-        rows.push({member_id:m.id,type,title,location:location||'연수원',start_date:start,end_date:end||start,time_mode:'allDay',status:'confirmed',source:'csv',created_by:session.user.id,updated_by:session.user.id});
+        rows.push({room_id:currentRoomId,member_id:m.id,type,title,location:location||'연수원',start_date:start,end_date:end||start,time_mode:'allDay',status:'confirmed',source:'csv',created_by:session.user.id,updated_by:session.user.id});
       }
       if(!rows.length){$('csvMsg').innerHTML='<span style="color:#dc2626">등록할 행이 없습니다. '+errs.join('; ')+'</span>';return;}
       const{error}=await supa.from('events').insert(rows);
@@ -660,11 +762,29 @@ $('whoami').onclick=async()=>{
   $('whoami').textContent=displayName(session.user);
 };
 
+/* 방 화면 버튼 + 설치 프롬프트 */
+$('roomsBtn').onclick=()=>showRoomView();
+$('logoutBtn2').onclick=async()=>{await supa.auth.signOut();};
+$('roomSearch').oninput=()=>renderRooms();
+$('createRoomBtn').onclick=()=>{const dpt=(session.user.user_metadata&&session.user.user_metadata.dept)||'';$('crName').value=dpt;$('crPw').value='';$('crMsg').textContent='';showOv('createRoomOverlay');};
+$('crSave').onclick=async()=>{
+  const name=$('crName').value.trim(),pw=$('crPw').value;
+  if(!name||!pw){$('crMsg').textContent='방 이름과 비밀번호를 입력하세요';return;}
+  $('crSave').disabled=true;
+  const{data,error}=await supa.rpc('create_room',{p_name:name,p_password:pw,p_my_name:displayName(session.user)});
+  $('crSave').disabled=false;
+  if(error){$('crMsg').textContent='실패: '+error.message;return;}
+  closeOv('createRoomOverlay');myRoomIds.add(data);enterRoom(data,name);
+};
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredInstallPrompt=e;$('installBtn').style.display='inline-flex';});
+$('installBtn').onclick=async()=>{if(!deferredInstallPrompt)return;deferredInstallPrompt.prompt();try{await deferredInstallPrompt.userChoice;}catch(e){}deferredInstallPrompt=null;$('installBtn').style.display='none';};
+(function(){const ios=/iphone|ipad|ipod/i.test(navigator.userAgent);const standalone=window.navigator.standalone||window.matchMedia('(display-mode: standalone)').matches;if(ios&&!standalone)$('iosHint').classList.remove('hidden');})();
+
 /* PWA: 서비스워커 등록(설치 가능·앱처럼 실행) */
 if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{});});}
 
 /* 시작: 세션 확인 */
-(async()=>{const{data}=await supa.auth.getSession();if(data.session){session=data.session;$('authView').classList.add('hidden');$('appView').classList.remove('hidden');$('whoami').textContent=displayName(session.user);bootApp();}})();
+(async()=>{const{data}=await supa.auth.getSession();if(data.session){session=data.session;$('whoami').textContent=displayName(session.user);showRoomView();}})();
 </script>
 </body>
 </html>
