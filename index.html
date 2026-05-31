@@ -427,19 +427,18 @@ const DEFAULT_CATEGORIES=[
   {key:'event',label:'행사',color:'#ec4899'},
   {key:'etc',label:'기타',color:'#64748b'},
 ];
-const CAT_KEY='kosme_categories';
-let CATEGORIES={}, LABEL2TYPE={};
-function getCatArray(){
-  let arr;try{arr=JSON.parse(localStorage.getItem(CAT_KEY));}catch(e){}
-  if(!Array.isArray(arr)||!arr.length)arr=DEFAULT_CATEGORIES.map(c=>({...c}));
-  return arr.filter(c=>c&&c.key&&c.label&&c.color);
-}
-function loadCategories(){
-  CATEGORIES={};getCatArray().forEach(c=>{CATEGORIES[c.key]={label:c.label,color:c.color};});
+let CATEGORIES={}, LABEL2TYPE={}, currentCatArray=[];
+function setCategories(arr){
+  if(!Array.isArray(arr)||!arr.length)arr=DEFAULT_CATEGORIES;
+  arr=arr.filter(c=>c&&c.key&&c.label&&c.color).map(c=>({key:c.key,label:c.label,color:c.color}));
+  if(!arr.length)arr=DEFAULT_CATEGORIES.map(c=>({...c}));
+  currentCatArray=arr;CATEGORIES={};
+  arr.forEach(c=>{CATEGORIES[c.key]={label:c.label,color:c.color};});
   LABEL2TYPE=Object.fromEntries(Object.entries(CATEGORIES).map(([k,v])=>[v.label,k]));
 }
-function saveCategories(arr){localStorage.setItem(CAT_KEY,JSON.stringify(arr));loadCategories();}
-loadCategories();
+setCategories(DEFAULT_CATEGORIES);
+async function loadRoomCategories(){let cats=null;try{const r=await supa.rpc('get_room_categories',{p_room_id:currentRoomId});cats=r.data;}catch(e){}setCategories(cats);}
+async function saveRoomCategories(arr){try{const{data,error}=await supa.rpc('set_room_categories',{p_room_id:currentRoomId,p_categories:arr});if(error||!data)return false;setCategories(arr);return true;}catch(e){return false;}}
 function cat(t){return CATEGORIES[t]||{label:t||'기타',color:'#94a3b8'};}
 const STATUS={tentative:'예정',confirmed:'확정',cancelled:'폐강'};
 
@@ -542,8 +541,9 @@ async function enterRoom(roomId,roomName){
   $('roomView').classList.add('hidden');$('appView').classList.remove('hidden');
   $('roomBadge').textContent='🏷 '+roomName;
   $('availDate').value=toYMD(new Date());
-  await Promise.all([loadMembers(),loadEvents()]);
+  await Promise.all([loadMembers(),loadEvents(),loadRoomCategories()]);
   await ensureMyMember();
+  activeCats=new Set(Object.keys(CATEGORIES));
   subscribe();
   render();
 }
@@ -561,6 +561,7 @@ async function ensureMyMember(){
   /* 부서원 관리·엑셀 일괄등록은 방 관리자 전용 */
   $('membersBtn').style.display=isAdmin?'inline-flex':'none';
   $('csvBtn').style.display=isAdmin?'inline-flex':'none';
+  $('catGearBtn').style.display=isAdmin?'inline-grid':'none';
 }
 async function loadMembers(){const{data}=await supa.from('members').select('*').eq('room_id',currentRoomId).order('name');state.members=data||[];}
 async function loadEvents(){const{data}=await supa.from('events').select('*').eq('room_id',currentRoomId).order('start_date');state.events=data||[];}
@@ -830,15 +831,21 @@ function renderCatEditor(){
   ab.onclick=()=>{const v=al.value.trim();if(!v){alert('새 분류 이름을 입력하세요');return;}editCats.push({key:'c'+Math.random().toString(36).slice(2,7),label:v,color:ac.value});renderCatEditor();};
   add.appendChild(ac);add.appendChild(al);add.appendChild(ab);list.appendChild(add);
 }
-$('catGearBtn').onclick=()=>{editCats=getCatArray().map(c=>({...c}));renderCatEditor();showOv('catSettingsOverlay');};
-$('catSave').onclick=()=>{
+$('catGearBtn').onclick=()=>{editCats=currentCatArray.map(c=>({...c}));renderCatEditor();showOv('catSettingsOverlay');};
+$('catSave').onclick=async()=>{
   const arr=editCats.map(c=>({key:c.key,label:String(c.label||'').trim(),color:c.color})).filter(c=>c.label);
   if(!arr.length){alert('분류는 최소 1개는 있어야 합니다');return;}
-  saveCategories(arr);
+  $('catSave').disabled=true;const ok=await saveRoomCategories(arr);$('catSave').disabled=false;
+  if(!ok){alert('저장 실패: 분류는 방 관리자만 변경할 수 있어요.');return;}
   activeCats=new Set(Object.keys(CATEGORIES));
   closeOv('catSettingsOverlay');render();
 };
-$('catReset').onclick=()=>{if(!confirm('분류를 기본값으로 되돌릴까요?'))return;localStorage.removeItem(CAT_KEY);loadCategories();activeCats=new Set(Object.keys(CATEGORIES));closeOv('catSettingsOverlay');render();};
+$('catReset').onclick=async()=>{
+  if(!confirm('분류를 기본 7개로 되돌릴까요? (방 전체에 적용)'))return;
+  const ok=await saveRoomCategories(DEFAULT_CATEGORIES.map(c=>({...c})));
+  if(!ok){alert('관리자만 변경할 수 있어요.');return;}
+  activeCats=new Set(Object.keys(CATEGORIES));closeOv('catSettingsOverlay');render();
+};
 
 /* PWA: 서비스워커 등록(설치 가능·앱처럼 실행) */
 if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{});});}
