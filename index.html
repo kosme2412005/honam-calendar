@@ -72,6 +72,14 @@
   .room-item .rgo{font-size:12px;font-weight:800;color:var(--primary);}
   .room-item.mine{border-color:#a7f3d0;background:#f0fdf9;}
   .room-empty{color:var(--muted);font-size:13px;text-align:center;padding:20px 0;}
+  /* 헤더 연결됨+부서명 마크 */
+  .conn-stack{display:flex;flex-direction:column;gap:3px;align-items:flex-start;}
+  .room-badge{font-size:11.5px;font-weight:800;background:#0f172a;color:#fff;padding:3px 10px;border-radius:8px;white-space:nowrap;letter-spacing:-.2px;}
+  /* 탭+월 네비 중앙 정렬 */
+  .trow-nav{justify-content:center;}
+  /* 분류 설정 톱니바퀴 */
+  .gear-btn{margin-left:auto;width:28px;height:28px;border:1px solid var(--border);background:#fff;border-radius:8px;font-size:14px;color:var(--muted);display:grid;place-items:center;}
+  .gear-btn:hover{border-color:var(--primary);color:var(--primary);}
   .btn{border:1px solid var(--border-strong);background:#fff;color:var(--text);padding:9px 13px;border-radius:9px;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px;transition:.12s;white-space:nowrap;}
   .btn:hover{background:#f9fafb;border-color:var(--primary);}
   .btn.primary{background:var(--primary);color:#fff;border-color:var(--primary);}
@@ -246,11 +254,14 @@
   <header class="top">
     <div class="brand">
       <div class="logo">중진공</div>
-      <div><h1>KOSME 일정·가용인력</h1><p id="roomName">📁 부서 공간</p></div>
+      <div><h1>KOSME 일정·가용인력</h1><p>휴가·출장·회의·연수·교육 한눈에</p></div>
     </div>
     <button class="btn primary" id="addBtn">＋ 일정</button>
     <div class="top-right">
-      <span id="syncBadge" class="sync ok">● 연결됨</span>
+      <div class="conn-stack">
+        <span id="syncBadge" class="sync ok">● 연결됨</span>
+        <span id="roomBadge" class="room-badge"></span>
+      </div>
       <span class="who" id="whoami"></span>
       <button class="btn sm" id="roomsBtn">🏠 방 목록</button>
       <button class="btn sm" id="membersBtn">👥 부서원</button>
@@ -260,7 +271,7 @@
   </header>
 
   <div class="toolbar">
-    <div class="trow">
+    <div class="trow trow-nav">
       <div class="tabs">
         <button class="tab active" data-view="cal">📅 캘린더</button>
         <button class="tab" data-view="avail">🟢 가용 인력</button>
@@ -272,13 +283,12 @@
         <button class="nav-btn" id="nextM">›</button>
       </div>
       <button class="btn ghost sm" id="todayBtn">오늘</button>
-      <div class="spacer"></div>
     </div>
     <div class="trow">
-      <span class="flabel">분류</span><span id="catFilters"></span>
+      <span class="flabel">분류</span><span id="catFilters"></span><button id="catGearBtn" class="gear-btn" title="분류 이름 설정">⚙</button>
     </div>
     <div class="trow">
-      <span class="flabel" id="deptLabel" title="클릭하면 부서명 변경" style="cursor:pointer;border-bottom:1px dotted currentColor">부서원</span><span id="memberFilters"></span>
+      <span class="flabel">부서원</span><span id="memberFilters"></span>
     </div>
   </div>
 
@@ -386,6 +396,18 @@
   </div>
 </div>
 
+<!-- 분류 이름 설정 모달 -->
+<div class="overlay" id="catSettingsOverlay">
+  <div class="modal">
+    <div class="modal-head"><h3>분류 이름 설정 (선택)</h3><button class="x" data-close>×</button></div>
+    <div class="modal-body">
+      <p style="font-size:12.5px;color:var(--muted);margin:0 0 12px;line-height:1.6;">분류 이름을 원하는 대로 바꿀 수 있어요(이 기기에 저장). 색상은 유지됩니다.</p>
+      <div id="catSettingsList"></div>
+    </div>
+    <div class="modal-foot"><button class="btn" id="catReset">기본값</button><button class="btn" data-close>취소</button><button class="btn primary" id="catSave">저장</button></div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 /* ===== 설정 ===== */
@@ -398,7 +420,15 @@ const CATEGORIES = {
   meeting:{label:'회의',color:'#8b5cf6'}, training_op:{label:'연수운영',color:'#f59e0b'},
   education:{label:'교육수강',color:'#06b6d4'}, event:{label:'행사',color:'#ec4899'}, etc:{label:'기타',color:'#64748b'},
 };
-const LABEL2TYPE = Object.fromEntries(Object.entries(CATEGORIES).map(([k,v])=>[v.label,k]));
+let LABEL2TYPE = {};
+const DEFAULT_CAT_LABELS=Object.fromEntries(Object.entries(CATEGORIES).map(([k,c])=>[k,c.label]));
+const CAT_LABELS_KEY='kosme_cat_labels';
+function applyCatLabels(){
+  let ov={};try{ov=JSON.parse(localStorage.getItem(CAT_LABELS_KEY)||'{}');}catch(e){}
+  Object.keys(CATEGORIES).forEach(k=>{CATEGORIES[k].label=(ov[k]&&String(ov[k]).trim())||DEFAULT_CAT_LABELS[k];});
+  LABEL2TYPE=Object.fromEntries(Object.entries(CATEGORIES).map(([k,v])=>[v.label,k]));
+}
+applyCatLabels();
 const STATUS={tentative:'예정',confirmed:'확정',cancelled:'폐강'};
 
 /* ===== 상태 ===== */
@@ -498,7 +528,7 @@ async function enterRoom(roomId,roomName){
   currentRoomId=roomId;currentRoomName=roomName;
   state={members:[],events:[]};activeCats=new Set(Object.keys(CATEGORIES));activeMembers=new Set();curView='cal';viewDate=new Date();
   $('roomView').classList.add('hidden');$('appView').classList.remove('hidden');
-  $('roomName').textContent='📁 '+roomName;
+  $('roomBadge').textContent='🏷 '+roomName;
   $('availDate').value=toYMD(new Date());
   await Promise.all([loadMembers(),loadEvents()]);
   await ensureMyMember();
@@ -746,11 +776,6 @@ $('addBtn').onclick=()=>openEvent(null);
 $('membersBtn').onclick=()=>{renderMemberMgmt();showOv('memberOverlay');};
 $('csvBtn').onclick=()=>{$('csvMsg').textContent='';showOv('csvOverlay');};
 $('availDate').onchange=()=>renderAvail();
-/* 부서명 라벨 클릭 → 부서명 변경(이 기기에 저장) */
-const DEPT_KEY='kosme_dept_name';
-function applyDept(){$('deptLabel').textContent=localStorage.getItem(DEPT_KEY)||'부서원';}
-$('deptLabel').onclick=()=>{const cur=localStorage.getItem(DEPT_KEY)||'';const n=prompt('표시할 부서명을 입력하세요 (예: 기획운영부)',cur);if(n===null)return;n.trim()?localStorage.setItem(DEPT_KEY,n.trim()):localStorage.removeItem(DEPT_KEY);applyDept();};
-applyDept();
 /* 이름 클릭 → 표시 이름 변경(기존 계정도 이름 설정 가능) */
 $('whoami').style.cursor='pointer';$('whoami').title='클릭하면 이름 변경';
 $('whoami').onclick=async()=>{
@@ -779,6 +804,26 @@ $('crSave').onclick=async()=>{
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredInstallPrompt=e;$('installBtn').style.display='inline-flex';});
 $('installBtn').onclick=async()=>{if(!deferredInstallPrompt)return;deferredInstallPrompt.prompt();try{await deferredInstallPrompt.userChoice;}catch(e){}deferredInstallPrompt=null;$('installBtn').style.display='none';};
 (function(){const ios=/iphone|ipad|ipod/i.test(navigator.userAgent);const standalone=window.navigator.standalone||window.matchMedia('(display-mode: standalone)').matches;if(ios&&!standalone)$('iosHint').classList.remove('hidden');})();
+
+/* 분류 이름 설정(톱니바퀴) */
+$('catGearBtn').onclick=()=>{
+  const list=$('catSettingsList');list.innerHTML='';
+  let ov={};try{ov=JSON.parse(localStorage.getItem(CAT_LABELS_KEY)||'{}');}catch(e){}
+  Object.entries(DEFAULT_CAT_LABELS).forEach(([k,def])=>{
+    const row=document.createElement('div');row.className='field';
+    row.innerHTML=`<label><span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:${CATEGORIES[k].color};margin-right:6px;vertical-align:-1px"></span>${def}</label>`;
+    const inp=document.createElement('input');inp.type='text';inp.dataset.cat=k;inp.value=ov[k]||'';inp.placeholder=def;
+    row.appendChild(inp);list.appendChild(row);
+  });
+  showOv('catSettingsOverlay');
+};
+$('catSave').onclick=()=>{
+  const ov={};
+  $('catSettingsList').querySelectorAll('input[data-cat]').forEach(inp=>{const v=inp.value.trim();if(v&&v!==DEFAULT_CAT_LABELS[inp.dataset.cat])ov[inp.dataset.cat]=v;});
+  localStorage.setItem(CAT_LABELS_KEY,JSON.stringify(ov));
+  applyCatLabels();closeOv('catSettingsOverlay');render();
+};
+$('catReset').onclick=()=>{localStorage.removeItem(CAT_LABELS_KEY);applyCatLabels();closeOv('catSettingsOverlay');render();};
 
 /* PWA: 서비스워커 등록(설치 가능·앱처럼 실행) */
 if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{});});}
