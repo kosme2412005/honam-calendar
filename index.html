@@ -72,6 +72,8 @@
   .room-item .rsub{font-size:12px;color:var(--muted);margin-top:2px;}
   .room-item .rgo{font-size:12px;font-weight:800;color:var(--primary);}
   .room-item.mine{border-color:#a7f3d0;background:#f0fdf9;}
+  .room-item.del{border-color:#fecaca;background:#fef2f2;}
+  .room-item.del:hover{border-color:#dc2626;background:#fee2e2;}
   .room-empty{color:var(--muted);font-size:13px;text-align:center;padding:20px 0;}
   /* 헤더 연결됨+부서명 마크 */
   .conn-stack{display:flex;flex-direction:column;gap:3px;align-items:flex-start;}
@@ -230,7 +232,7 @@
     </header>
     <div id="iosHint" class="ios-hint hidden">📲 아이폰: 하단 <b>공유</b> → <b>홈 화면에 추가</b>로 앱처럼 쓸 수 있어요</div>
     <div class="room-card">
-      <div class="room-card-head"><h3>부서 공간 선택</h3><button class="btn primary sm" id="createRoomBtn">＋ 방 만들기</button></div>
+      <div class="room-card-head"><h3>부서 공간 선택</h3><div style="display:flex;gap:6px;"><button class="btn danger sm" id="delRoomBtn" style="display:none">－ 방 삭제</button><button class="btn primary sm" id="createRoomBtn">＋ 방 만들기</button></div></div>
       <div id="myRoomsWrap"></div>
       <div class="room-divider">전체 부서 방</div>
       <input type="text" id="roomSearch" class="room-search" placeholder="부서명 검색" />
@@ -494,13 +496,21 @@ supa.auth.onAuthStateChange((_e,sess)=>{
 });
 
 /* ===== 방 선택 ===== */
-let channel=null, allRooms=[], myRoomIds=new Set();
+let channel=null, allRooms=[], myRoomIds=new Set(), deleteMode=false;
 async function showRoomView(){
   if(channel){supa.removeChannel(channel);channel=null;}
   currentRoomId=null;
   $('authView').classList.add('hidden');$('appView').classList.add('hidden');$('roomView').classList.remove('hidden');
   $('roomHello').textContent=displayName(session.user)+'님, 들어갈 부서 공간을 선택하세요';
+  deleteMode=false;updateDelBtn();
+  const isController=ADMIN_EMAILS.includes((session.user.email||'').toLowerCase());
+  $('delRoomBtn').style.display=isController?'inline-flex':'none';
   await loadRooms();
+}
+function updateDelBtn(){
+  const b=$('delRoomBtn');if(!b)return;
+  b.textContent=deleteMode?'✓ 삭제 종료':'－ 방 삭제';
+  b.classList.toggle('primary',deleteMode);b.classList.toggle('danger',!deleteMode);
 }
 async function loadRooms(){
   const [{data:mine},{data:all}]=await Promise.all([supa.rpc('my_rooms'),supa.rpc('list_rooms')]);
@@ -509,12 +519,22 @@ async function loadRooms(){
   renderRooms();
 }
 function roomItem(r,mine){
-  const d=document.createElement('div');d.className='room-item'+(mine?' mine':'');
+  const d=document.createElement('div');d.className='room-item'+(mine?' mine':'')+(deleteMode?' del':'');
+  const go=deleteMode?'<span style="color:#dc2626;font-weight:700;">🗑 삭제</span>':(mine?'입장 ›':'🔒 입장');
   d.innerHTML=`<div class="ricon">${(r.name||'?').slice(0,2)}</div>
     <div class="rmeta"><div class="rname">${r.name}</div><div class="rsub">${r.member_count||0}명 참여</div></div>
-    <div class="rgo">${mine?'입장 ›':'🔒 입장'}</div>`;
-  d.onclick=()=>mine?enterRoom(r.id,r.name):promptJoin(r);
+    <div class="rgo">${go}</div>`;
+  d.onclick=()=>deleteMode?deleteRoom(r):(mine?enterRoom(r.id,r.name):promptJoin(r));
   return d;
+}
+async function deleteRoom(r){
+  if(!confirm(`'${r.name}' 방을 삭제할까요?\n\n⚠ 이 방의 부서원 명단과 모든 일정이 영구 삭제되며 복구할 수 없습니다.`))return;
+  if(prompt(`정말 삭제하려면 방 이름 "${r.name}" 을(를) 그대로 입력하세요`)!==r.name){alert('이름이 일치하지 않아 취소했습니다.');return;}
+  const{data,error}=await supa.rpc('delete_room',{p_room_id:r.id});
+  if(error)return alert('삭제 실패: '+error.message);
+  if(!data)return alert('이미 삭제되었거나 찾을 수 없는 방입니다.');
+  myRoomIds.delete(r.id);
+  await loadRooms();
 }
 function renderRooms(){
   const mw=$('myRoomsWrap');mw.innerHTML='';
@@ -795,6 +815,7 @@ $('roomsBtn').onclick=()=>showRoomView();
 $('logoutBtn2').onclick=async()=>{await supa.auth.signOut();};
 $('roomSearch').oninput=()=>renderRooms();
 $('createRoomBtn').onclick=()=>{const dpt=(session.user.user_metadata&&session.user.user_metadata.dept)||'';$('crName').value=dpt;$('crPw').value='';$('crMsg').textContent='';showOv('createRoomOverlay');};
+$('delRoomBtn').onclick=()=>{deleteMode=!deleteMode;updateDelBtn();renderRooms();};
 $('crSave').onclick=async()=>{
   const name=$('crName').value.trim(),pw=$('crPw').value;
   if(!name||!pw){$('crMsg').textContent='방 이름과 비밀번호를 입력하세요';return;}
