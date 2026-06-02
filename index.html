@@ -704,7 +704,13 @@ function buildCatPicker(){
   $('subTypeField').style.display=(pickedCat=='trip')?'block':'none';
 }
 function fillMembers(sel){const s=$('evtMember');s.innerHTML='';
-  const list=isAdmin?state.members:state.members.filter(m=>m.id===myMemberId);
+  let list;
+  if(isAdmin){list=state.members;}
+  else{
+    // 비관리자: 이 일정의 실제 작성자(소유자)를 고정 표시 — 본인 이름으로 오해 방지
+    const owner=state.members.find(m=>m.id===sel);
+    list=owner?[owner]:state.members.filter(m=>m.id===myMemberId);
+  }
   list.forEach(m=>{const o=document.createElement('option');o.value=m.id;o.textContent=m.team?`${m.name} (${m.team})`:m.name;if(m.id==sel)o.selected=true;s.appendChild(o);});
   s.disabled=!isAdmin;}
 function setSeg(seg,val,attr){seg.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset[attr]==val));}
