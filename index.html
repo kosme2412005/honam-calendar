@@ -129,6 +129,7 @@
   .evt.tentative{opacity:.85;border:1px dashed rgba(255,255,255,.7);}
   .evt.cancelled{text-decoration:line-through;opacity:.5;}
   .evt .loc{font-size:9.5px;opacity:.85;}
+  .cat-tag{display:inline-block;font-family:'Malgun Gothic','맑은 고딕',sans-serif;font-weight:800;font-size:9.5px;color:#111;background:rgba(255,255,255,.92);padding:0 4px;border-radius:4px;margin-right:4px;letter-spacing:-.3px;line-height:1.5;}
   .evt:hover{filter:brightness(1.07);}
   .more{font-size:10.5px;color:var(--muted);font-weight:700;padding:1px 6px;}
 
@@ -156,6 +157,7 @@
   .list-evt .meta{flex:1;}.list-evt .meta .t{font-weight:700;font-size:13px;}
   .list-evt .meta .s{font-size:11.5px;color:var(--muted);margin-top:2px;}
   .list-evt .tag{font-size:10.5px;font-weight:800;padding:3px 9px;border-radius:999px;color:#fff;}
+  .list-evt .tag.cat-tag-list{background:#eef2f7;color:#111;font-family:'Malgun Gothic','맑은 고딕',sans-serif;}
   .empty{text-align:center;color:var(--muted);padding:46px 0;font-size:13px;}
 
   .legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;padding:11px 15px;background:var(--card);border:1px solid var(--border);border-radius:12px;font-size:12px;color:var(--muted);align-items:center;}
@@ -446,6 +448,10 @@ setCategories(DEFAULT_CATEGORIES);
 async function loadRoomCategories(){let cats=null;try{const r=await supa.rpc('get_room_categories',{p_room_id:currentRoomId});cats=r.data;}catch(e){}setCategories(cats);}
 async function saveRoomCategories(arr){try{const{data,error}=await supa.rpc('set_room_categories',{p_room_id:currentRoomId,p_categories:arr});if(error||!data)return false;setCategories(arr);return true;}catch(e){return false;}}
 function cat(t){return CATEGORIES[t]||{label:t||'기타',color:'#94a3b8'};}
+/* 담당자별 색상 — 분류 대신 담당자로 색을 구분(분류는 검은 글자 뱃지로 표시) */
+const MEMBER_COLORS={'신원':'#dc2626','조류림':'#dc2626','박지용':'#111827','박세진':'#16a34a','정경민':'#ec4899','양동호':'#2563eb'};
+const MEMBER_COLOR_ETC='#64748b';
+function memberColor(id){const m=state.members.find(x=>x.id==id);return (m&&MEMBER_COLORS[m.name])||MEMBER_COLOR_ETC;}
 const STATUS={tentative:'예정',confirmed:'확정',cancelled:'폐강'};
 
 /* ===== 상태 ===== */
@@ -618,27 +624,30 @@ function renderFilters(){
   const cf=$('catFilters');const gear=$('catGearBtn');cf.innerHTML='';
   Object.entries(CATEGORIES).forEach(([k,c])=>{
     const on=activeCats.has(k);const b=document.createElement('button');
-    b.className='chip-toggle'+(on?' active':'');b.style.background=on?c.color:'';
-    b.innerHTML=`<span class="dot" style="background:${on?'#fff':c.color}"></span>${c.label}`;
+    b.className='chip-toggle cat-chip'+(on?' active':'');b.style.background=on?'#334155':'';
+    b.innerHTML=`<span style="font-family:'Malgun Gothic','맑은 고딕',sans-serif;font-weight:800">${c.label}</span>`;
     b.onclick=()=>{on?activeCats.delete(k):activeCats.add(k);render();};cf.appendChild(b);
   });
   if(gear)cf.appendChild(gear);
   const mf=$('memberFilters');mf.innerHTML='';
   const all=document.createElement('button');all.className='chip-toggle member-chip'+(activeMembers.size==0?' active':'');all.textContent='전체';all.onclick=()=>{activeMembers.clear();render();};mf.appendChild(all);
-  state.members.forEach(m=>{const on=activeMembers.has(m.id);const b=document.createElement('button');b.className='chip-toggle member-chip'+(on?' active':'');b.textContent=m.name;b.onclick=()=>{on?activeMembers.delete(m.id):activeMembers.add(m.id);render();};mf.appendChild(b);});
+  state.members.forEach(m=>{const on=activeMembers.has(m.id);const b=document.createElement('button');b.className='chip-toggle member-chip'+(on?' active':'');b.textContent=m.name;if(on)b.style.background=memberColor(m.id);b.onclick=()=>{on?activeMembers.delete(m.id):activeMembers.add(m.id);render();};mf.appendChild(b);});
 }
 function renderLegend(){
   const lg=$('legend');lg.innerHTML='';
-  Object.values(CATEGORIES).forEach(c=>{const it=document.createElement('div');it.className='item';it.innerHTML=`<span class="sw" style="background:${c.color}"></span>${c.label}`;lg.appendChild(it);});
-  const h=document.createElement('div');h.className='hint';h.textContent='점선=예정 · 취소선=폐강 · 날짜 클릭=추가';lg.appendChild(h);
+  const seen=new Set();
+  state.members.forEach(m=>{if(seen.has(m.name))return;seen.add(m.name);
+    const it=document.createElement('div');it.className='item';
+    it.innerHTML=`<span class="sw" style="background:${memberColor(m.id)}"></span>${m.name}`;lg.appendChild(it);});
+  const h=document.createElement('div');h.className='hint';h.textContent='색=담당자 · 글자뱃지=분류 · 점선=예정 · 취소선=폐강';lg.appendChild(h);
 }
 function makeChip(e){
   const c=cat(e.type);const chip=document.createElement('div');
   chip.className='evt'+(e.status=='tentative'?' tentative':'')+(e.status=='cancelled'?' cancelled':'');
-  chip.style.background=c.color;
+  chip.style.background=memberColor(e.member_id);
   const t=e.time_mode=='range'&&e.start_time?e.start_time.slice(0,5)+' ':'';
   const loc=e.location&&e.location!='연수원'?` <span class="loc">@${e.location}</span>`:'';
-  chip.innerHTML=`${memberName(e.member_id)} ${t}${e.title}${loc}`;
+  chip.innerHTML=`<span class="cat-tag">${c.label}</span>${memberName(e.member_id)} ${t}${e.title}${loc}`;
   chip.title=`[${c.label}${e.sub_type?'·'+e.sub_type:''}] ${memberName(e.member_id)} · ${e.title}\n${e.start_date}~${e.end_date} (${STATUS[e.status]})\n장소:${e.location||'-'}${e.memo?'\n'+e.memo:''}`;
   chip.onclick=ev=>{ev.stopPropagation();openEvent(e.id);};return chip;
 }
@@ -690,7 +699,7 @@ function renderList(){
     evs.forEach(e=>{
       const c=cat(e.type);const row=document.createElement('div');row.className='list-evt';
       const when=e.time_mode=='allDay'?'종일':(e.time_mode=='am'?'오전':(e.time_mode=='pm'?'오후':`${(e.start_time||'').slice(0,5)}~${(e.end_time||'').slice(0,5)}`));
-      row.innerHTML=`<div class="bar" style="background:${c.color}"></div><div class="meta"><div class="t">${memberName(e.member_id)} · ${e.title} ${e.status!='confirmed'?'<span style="color:#9aa3af">('+STATUS[e.status]+')</span>':''}</div><div class="s">${when} · ${e.location||''}${e.memo?' · '+e.memo:''}</div></div><span class="tag" style="background:${c.color}">${c.label}</span>`;
+      row.innerHTML=`<div class="bar" style="background:${memberColor(e.member_id)}"></div><div class="meta"><div class="t">${memberName(e.member_id)} · ${e.title} ${e.status!='confirmed'?'<span style="color:#9aa3af">('+STATUS[e.status]+')</span>':''}</div><div class="s">${when} · ${e.location||''}${e.memo?' · '+e.memo:''}</div></div><span class="tag cat-tag-list">${c.label}</span>`;
       row.onclick=()=>openEvent(e.id);wrap.appendChild(row);
     });body.appendChild(wrap);
   }
