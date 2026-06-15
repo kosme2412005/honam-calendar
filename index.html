@@ -186,8 +186,21 @@
   .seg button{flex:1;padding:8px;border:1.5px solid var(--border-strong);background:#fff;border-radius:8px;font-size:12.5px;font-weight:700;color:var(--muted);}
   .seg button.on{background:var(--primary);color:#fff;border-color:var(--primary);}
   .x{font-size:22px;color:var(--muted);background:none;border:none;line-height:1;}.x:hover{color:var(--text);}
-  .member-item{display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid var(--border);border-radius:9px;margin-bottom:8px;}
+  .member-item{display:flex;align-items:center;flex-wrap:wrap;gap:10px;padding:8px 12px;border:1px solid var(--border);border-radius:9px;margin-bottom:8px;}
   .member-item .name{flex:1;font-weight:600;}.member-item .team{font-size:11px;color:var(--muted);}
+  .color-cur{width:28px;height:28px;border-radius:7px;border:2px solid #fff;box-shadow:0 0 0 1px var(--border-strong);flex-shrink:0;cursor:pointer;}
+  .color-palette{display:none;flex-basis:100%;flex-wrap:wrap;gap:7px;margin-top:6px;padding-top:8px;border-top:1px dashed var(--border);}
+  .color-palette.open{display:flex;}
+  .color-palette .sw-pick{width:28px;height:28px;border-radius:7px;border:2px solid #fff;box-shadow:0 0 0 1px var(--border-strong);cursor:pointer;}
+  .color-palette .sw-pick.on{box-shadow:0 0 0 2px var(--primary);transform:scale(1.08);}
+  .day-evt{border-radius:12px;padding:11px 13px;margin-bottom:9px;cursor:pointer;transition:.12s;}
+  .day-evt:hover{filter:brightness(.97);}
+  .day-evt.cancelled .day-evt-title{text-decoration:line-through;opacity:.6;}
+  .day-evt-top{display:flex;align-items:center;gap:7px;flex-wrap:wrap;}
+  .day-evt-title{font-weight:700;font-size:14px;color:#111827;}
+  .day-evt-st{font-size:11px;color:#9aa3af;}
+  .day-evt-sub{font-size:12px;color:#475569;margin-top:5px;line-height:1.5;}
+  .day-evt .cat-tag{background:#fff;border:1px solid rgba(0,0,0,.12);}
   .add-row{display:flex;gap:8px;}.add-row input{flex:1;}
   @media(max-width:720px){
     .cell{min-height:78px;padding:4px 3px;gap:2px;}
@@ -296,7 +309,7 @@
       <button class="btn ghost sm" id="todayBtn">오늘</button>
     </div>
     <div class="trow">
-      <span class="flabel">분류</span><span id="catFilters"></span><button id="catGearBtn" class="gear-btn" title="분류 이름 설정">⚙</button>
+      <span class="flabel">분류</span><button id="catGearBtn" class="gear-btn" title="분류 이름 설정">⚙</button><span id="catFilters"></span>
     </div>
     <div class="trow">
       <span class="flabel">부서원</span><span id="memberFilters"></span>
@@ -339,9 +352,6 @@
     <div class="modal-body">
       <input type="hidden" id="evtId" />
       <div class="field"><label>분류</label><div class="cat-picker" id="catPicker"></div></div>
-      <div class="field" id="subTypeField"><label>출장 세부유형</label>
-        <select id="evtSubType"><option value="회의참석">회의참석</option><option value="외부행사운영">외부행사운영</option><option value="영업방문">영업방문</option></select>
-      </div>
       <div class="field"><label>부서원</label><select id="evtMember"></select></div>
       <div class="field"><label>제목</label><input type="text" id="evtTitle" placeholder="예: 연차 / 광주 출장 / ○○과정 운영" /></div>
       <div class="field"><label>장소</label><input type="text" id="evtLocation" placeholder="연수원 또는 외부 장소명(호텔 등)" value="연수원" /></div>
@@ -386,6 +396,15 @@
       </div>
     </div>
     <div class="modal-foot"><button class="btn" data-close>닫기</button></div>
+  </div>
+</div>
+
+<!-- 일자 상세 팝업 -->
+<div class="overlay" id="dayOverlay">
+  <div class="modal">
+    <div class="modal-head"><h3 id="dayPopTitle">일정</h3><button class="x" data-close>×</button></div>
+    <div class="modal-body" id="dayPopBody"></div>
+    <div class="modal-foot"><button class="btn primary" id="dayPopAdd">＋ 이 날짜에 일정 추가</button><button class="btn" data-close>닫기</button></div>
   </div>
 </div>
 
@@ -451,7 +470,9 @@ function cat(t){return CATEGORIES[t]||{label:t||'기타',color:'#94a3b8'};}
 /* 담당자별 색상 — 분류 대신 담당자로 색을 구분(분류는 검은 글자 뱃지로 표시) */
 const MEMBER_COLORS={'신원':'#dc2626','조류림':'#dc2626','박지용':'#111827','박세진':'#16a34a','정경민':'#ec4899','양동호':'#2563eb'};
 const MEMBER_COLOR_ETC='#64748b';
-function memberColor(id){const m=state.members.find(x=>x.id==id);return (m&&MEMBER_COLORS[m.name])||MEMBER_COLOR_ETC;}
+/* 선택 가능한 색 팔레트: 검정·회색 + 무지개 12색 */
+const COLOR_PALETTE=['#111827','#6b7280','#ef4444','#f97316','#f59e0b','#eab308','#84cc16','#22c55e','#14b8a6','#06b6d4','#3b82f6','#6366f1','#8b5cf6','#ec4899'];
+function memberColor(id){const m=state.members.find(x=>x.id==id);return (m&&m.color)||(m&&MEMBER_COLORS[m.name])||MEMBER_COLOR_ETC;}
 const STATUS={tentative:'예정',confirmed:'확정',cancelled:'폐강'};
 
 /* ===== 상태 ===== */
@@ -621,14 +642,13 @@ function render(){
   else renderList();
 }
 function renderFilters(){
-  const cf=$('catFilters');const gear=$('catGearBtn');cf.innerHTML='';
+  const cf=$('catFilters');cf.innerHTML='';
   Object.entries(CATEGORIES).forEach(([k,c])=>{
     const on=activeCats.has(k);const b=document.createElement('button');
     b.className='chip-toggle cat-chip'+(on?' active':'');b.style.background=on?'#334155':'';
     b.innerHTML=`<span style="font-family:'Malgun Gothic','맑은 고딕',sans-serif;font-weight:800">${c.label}</span>`;
     b.onclick=()=>{on?activeCats.delete(k):activeCats.add(k);render();};cf.appendChild(b);
   });
-  if(gear)cf.appendChild(gear);
   const mf=$('memberFilters');mf.innerHTML='';
   const all=document.createElement('button');all.className='chip-toggle member-chip'+(activeMembers.size==0?' active':'');all.textContent='전체';all.onclick=()=>{activeMembers.clear();render();};mf.appendChild(all);
   state.members.forEach(m=>{const on=activeMembers.has(m.id);const b=document.createElement('button');b.className='chip-toggle member-chip'+(on?' active':'');b.textContent=m.name;if(on)b.style.background=memberColor(m.id);b.onclick=()=>{on?activeMembers.delete(m.id):activeMembers.add(m.id);render();};mf.appendChild(b);});
@@ -641,15 +661,14 @@ function renderLegend(){
     it.innerHTML=`<span class="sw" style="background:${memberColor(m.id)}"></span>${m.name}`;lg.appendChild(it);});
   const h=document.createElement('div');h.className='hint';h.textContent='색=담당자 · 글자뱃지=분류 · 점선=예정 · 취소선=폐강';lg.appendChild(h);
 }
-function makeChip(e){
+function makeChip(e,ymd){
   const c=cat(e.type);const chip=document.createElement('div');
   chip.className='evt'+(e.status=='tentative'?' tentative':'')+(e.status=='cancelled'?' cancelled':'');
   chip.style.background=memberColor(e.member_id);
-  const t=e.time_mode=='range'&&e.start_time?e.start_time.slice(0,5)+' ':'';
-  const loc=e.location&&e.location!='연수원'?` <span class="loc">@${e.location}</span>`:'';
-  chip.innerHTML=`<span class="cat-tag">${c.label}</span>${memberName(e.member_id)} ${t}${e.title}${loc}`;
-  chip.title=`[${c.label}${e.sub_type?'·'+e.sub_type:''}] ${memberName(e.member_id)} · ${e.title}\n${e.start_date}~${e.end_date} (${STATUS[e.status]})\n장소:${e.location||'-'}${e.memo?'\n'+e.memo:''}`;
-  chip.onclick=ev=>{ev.stopPropagation();openEvent(e.id);};return chip;
+  /* 캘린더 칩에는 분류 + 담당자 + 제목만 (시간·장소는 상세 팝업에서) */
+  chip.innerHTML=`<span class="cat-tag">${c.label}</span>${memberName(e.member_id)} ${e.title}`;
+  chip.title=`[${c.label}] ${memberName(e.member_id)} · ${e.title}\n${e.start_date}~${e.end_date} (${STATUS[e.status]})\n장소:${e.location||'-'}${e.memo?'\n'+e.memo:''}`;
+  chip.onclick=ev=>{ev.stopPropagation();openDay(ymd);};return chip;
 }
 function renderCalendar(){
   const grid=$('grid');grid.innerHTML='';
@@ -662,11 +681,34 @@ function renderCalendar(){
     if(d.getDay()==0)cell.classList.add('sun');if(d.getDay()==6)cell.classList.add('sat');
     if(sameDay(d,today))cell.classList.add('today');
     const num=document.createElement('div');num.className='num';num.textContent=d.getDate();cell.appendChild(num);
-    const evs=eventsOnDay(d);evs.slice(0,3).forEach(e=>cell.appendChild(makeChip(e)));
+    const ymd=toYMD(d);
+    const evs=eventsOnDay(d);evs.slice(0,3).forEach(e=>cell.appendChild(makeChip(e,ymd)));
     if(evs.length>3){const m=document.createElement('div');m.className='more';m.textContent=`+${evs.length-3}개 더`;cell.appendChild(m);}
-    const ymd=toYMD(d);cell.onclick=()=>openEvent(null,ymd);grid.appendChild(cell);
+    cell.onclick=()=>openDay(ymd);grid.appendChild(cell);
   }
 }
+/* ===== 일자 상세 팝업 ===== */
+function openDay(ymd){
+  const[Y,M,D]=ymd.split('-').map(Number);const d=new Date(Y,M-1,D);
+  $('dayPopTitle').textContent=`${M}월 ${D}일 (${'일월화수목금토'[d.getDay()]})`;
+  const body=$('dayPopBody');body.innerHTML='';
+  const evs=state.events.filter(e=>passFilter(e)&&e.start_date<=ymd&&ymd<=e.end_date)
+    .sort((a,b)=>(b.time_mode=='allDay')-(a.time_mode=='allDay'));
+  if(!evs.length){body.innerHTML='<div class="empty" style="padding:34px 0">이 날짜에 등록된 일정이 없습니다.</div>';}
+  evs.forEach(e=>{
+    const c=cat(e.type);const col=memberColor(e.member_id);
+    const when=e.time_mode=='allDay'?'종일':(e.time_mode=='am'?'오전':(e.time_mode=='pm'?'오후':`${(e.start_time||'').slice(0,5)}~${(e.end_time||'').slice(0,5)}`));
+    const sub=[memberName(e.member_id),when,(e.location&&e.location!='연수원'?'@'+e.location:''),e.memo].filter(Boolean).join(' · ');
+    const row=document.createElement('div');row.className='day-evt'+(e.status=='cancelled'?' cancelled':'');
+    row.style.background=col+'1a';row.style.borderLeft='5px solid '+col;
+    row.innerHTML=`<div class="day-evt-top"><span class="cat-tag">${c.label}</span><span class="day-evt-title">${e.title}</span>${e.status!='confirmed'?`<span class="day-evt-st">(${STATUS[e.status]})</span>`:''}</div><div class="day-evt-sub">${sub}</div>`;
+    row.onclick=()=>{closeOv('dayOverlay');openEvent(e.id);};
+    body.appendChild(row);
+  });
+  $('dayPopAdd').onclick=()=>{closeOv('dayOverlay');openEvent(null,ymd);};
+  showOv('dayOverlay');
+}
+
 /* 가용 인력 */
 function dayStatus(memberId,ymd){
   const evs=state.events.filter(e=>e.member_id==memberId&&e.status!='cancelled'&&e.start_date<=ymd&&ymd<=e.end_date);
@@ -709,8 +751,7 @@ function renderList(){
 /* ===== 일정 모달 ===== */
 function buildCatPicker(){
   const cp=$('catPicker');cp.innerHTML='';
-  Object.entries(CATEGORIES).forEach(([k,c])=>{const o=document.createElement('div');o.className='cat-opt'+(k==pickedCat?' sel':'');o.textContent=c.label;if(k==pickedCat)o.style.background=c.color;o.onclick=()=>{if(evtReadOnly)return;pickedCat=k;buildCatPicker();$('subTypeField').style.display=(k=='trip')?'block':'none';};cp.appendChild(o);});
-  $('subTypeField').style.display=(pickedCat=='trip')?'block':'none';
+  Object.entries(CATEGORIES).forEach(([k,c])=>{const o=document.createElement('div');o.className='cat-opt'+(k==pickedCat?' sel':'');o.textContent=c.label;if(k==pickedCat)o.style.background=c.color;o.onclick=()=>{if(evtReadOnly)return;pickedCat=k;buildCatPicker();};cp.appendChild(o);});
 }
 function fillMembers(sel){const s=$('evtMember');s.innerHTML='';
   let list;
@@ -734,7 +775,6 @@ function openEvent(id,preset){
   $('evtModalTitle').textContent=e?(canEdit?'일정 수정':'일정 보기 (열람 전용)'):'일정 추가';
   $('evtId').value=e?e.id:'';
   pickedCat=e?e.type:'vacation';buildCatPicker();
-  $('evtSubType').value=e&&e.sub_type?e.sub_type:'회의참석';
   fillMembers(e?e.member_id:(isAdmin?(state.members[0]&&state.members[0].id):myMemberId));
   $('evtTitle').value=e?e.title:'';
   $('evtLocation').value=e?(e.location||'연수원'):'연수원';
@@ -745,7 +785,7 @@ function openEvent(id,preset){
   $('evtEndTime').value=e&&e.end_time?e.end_time.slice(0,5):'18:00';
   pickedStatus=e?e.status:'confirmed';setSeg($('statusSeg'),pickedStatus,'st');
   $('evtMemo').value=e?(e.memo||''):'';
-  ['evtTitle','evtLocation','evtStart','evtEnd','evtStartTime','evtEndTime','evtMemo','evtSubType'].forEach(idd=>$(idd).disabled=evtReadOnly);
+  ['evtTitle','evtLocation','evtStart','evtEnd','evtStartTime','evtEndTime','evtMemo'].forEach(idd=>$(idd).disabled=evtReadOnly);
   $('evtSave').style.display=evtReadOnly?'none':'inline-flex';
   $('evtDelete').style.display=(e&&!evtReadOnly)?'inline-flex':'none';
   showOv('eventOverlay');
@@ -756,7 +796,7 @@ $('evtSave').onclick=async()=>{
   if(!title)return alert('제목을 입력하세요');if(!s||!en)return alert('날짜를 입력하세요');
   if(en<s){const t=s;s=en;en=t;}
   const range=pickedTime=='range';
-  const payload={room_id:currentRoomId,member_id:isAdmin?$('evtMember').value:myMemberId,type:pickedCat,sub_type:pickedCat=='trip'?$('evtSubType').value:null,
+  const payload={room_id:currentRoomId,member_id:isAdmin?$('evtMember').value:myMemberId,type:pickedCat,sub_type:null,
     title,location:$('evtLocation').value.trim()||'연수원',start_date:s,end_date:en,time_mode:pickedTime,
     start_time:range?$('evtStartTime').value:null,end_time:range?$('evtEndTime').value:null,
     status:pickedStatus,memo:$('evtMemo').value.trim(),updated_by:session.user.id};
@@ -774,13 +814,23 @@ $('evtDelete').onclick=async()=>{const id=$('evtId').value;if(!id)return;if(!con
 /* ===== 부서원 ===== */
 function renderMemberMgmt(){
   const list=$('memberMgmtList');list.innerHTML='';
-  if(!state.members.length)list.innerHTML='<div class="empty" style="padding:18px">등록된 부서원이 없습니다.</div>';
+  if(!state.members.length){list.innerHTML='<div class="empty" style="padding:18px">등록된 부서원이 없습니다.</div>';return;}
   state.members.forEach(m=>{
+    const cur=memberColor(m.id);
     const it=document.createElement('div');it.className='member-item';
-    it.innerHTML=`<span class="name">${m.name}</span><span class="team">${m.team||''}</span>`;
-    const del=document.createElement('button');del.className='btn danger sm';del.textContent='삭제';
-    del.onclick=async()=>{const cnt=state.events.filter(e=>e.member_id==m.id).length;if(!confirm(`${m.name} 삭제?${cnt?`\n관련 일정 ${cnt}건도 삭제됩니다.`:''}`))return;await supa.from('members').delete().eq('id',m.id);await Promise.all([loadMembers(),loadEvents()]);renderMemberMgmt();render();};
-    it.appendChild(del);list.appendChild(it);
+    const swatches=COLOR_PALETTE.map(col=>`<button class="sw-pick${col.toLowerCase()===cur.toLowerCase()?' on':''}" data-col="${col}" style="background:${col}"></button>`).join('');
+    it.innerHTML=`<span class="name">${m.name}</span><span class="team">${m.team||''}</span>`+
+      `<button class="color-cur" title="일정 색 선택" style="background:${cur}"></button>`+
+      `<button class="btn danger sm mdel">삭제</button>`+
+      `<div class="color-palette">${swatches}</div>`;
+    it.querySelector('.color-cur').onclick=()=>it.querySelector('.color-palette').classList.toggle('open');
+    it.querySelectorAll('.sw-pick').forEach(b=>b.onclick=async()=>{
+      const{error}=await supa.from('members').update({color:b.dataset.col}).eq('id',m.id);
+      if(error){alert('색 변경 실패: '+error.message);return;}
+      await loadMembers();renderMemberMgmt();render();
+    });
+    it.querySelector('.mdel').onclick=async()=>{const cnt=state.events.filter(e=>e.member_id==m.id).length;if(!confirm(`${m.name} 삭제?${cnt?`\n관련 일정 ${cnt}건도 삭제됩니다.`:''}`))return;await supa.from('members').delete().eq('id',m.id);await Promise.all([loadMembers(),loadEvents()]);renderMemberMgmt();render();};
+    list.appendChild(it);
   });
 }
 $('addMemberBtn').onclick=async()=>{const name=$('newMemberName').value.trim();const team=$('newMemberTeam').value.trim();if(!name)return alert('이름을 입력하세요');const{error}=await supa.from('members').insert({name,team,room_id:currentRoomId});if(error)return alert('추가 실패: '+error.message);$('newMemberName').value='';$('newMemberTeam').value='';await loadMembers();renderMemberMgmt();render();};
