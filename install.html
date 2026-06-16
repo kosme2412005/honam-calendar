@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>KOSME 캘린더 설치 안내</title>
+<style>
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:'Pretendard','Malgun Gothic','맑은 고딕','Apple SD Gothic Neo',-apple-system,sans-serif;background:#f1f5f9;color:#0f172a;-webkit-font-smoothing:antialiased;line-height:1.6;}
+  .wrap{max-width:480px;margin:0 auto;padding:18px 16px 48px;}
+  .head{display:flex;align-items:center;gap:12px;margin:6px 0 16px;}
+  .logo{width:46px;height:46px;border-radius:12px;background:linear-gradient(135deg,#2563eb,#06b6d4);display:grid;place-items:center;color:#fff;font-weight:800;font-size:13px;flex-shrink:0;}
+  .head h1{font-size:19px;margin:0;letter-spacing:-.4px;}
+  .head p{font-size:12.5px;color:#64748b;margin:2px 0 0;}
+  .card{background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:18px;margin-bottom:14px;box-shadow:0 2px 10px rgba(15,23,42,.04);}
+  .qr-card{text-align:center;}
+  .qr-card img{width:200px;height:200px;border:1px solid #e2e8f0;border-radius:12px;padding:8px;background:#fff;}
+  .qr-card .url{display:inline-block;margin-top:12px;font-size:13px;font-weight:700;color:#2563eb;word-break:break-all;text-decoration:none;}
+  .qr-card .sub{font-size:12.5px;color:#64748b;margin-top:6px;}
+  .warn{background:#fff7ed;border:1px solid #fed7aa;border-radius:14px;padding:14px 16px;margin-bottom:14px;}
+  .warn b{color:#c2410c;}
+  .warn .t{font-weight:800;color:#9a3412;font-size:14px;margin-bottom:4px;}
+  h2{font-size:15.5px;margin:0 0 12px;display:flex;align-items:center;gap:8px;}
+  .badge{font-size:11px;font-weight:800;color:#fff;background:#0f172a;border-radius:999px;padding:3px 9px;}
+  .badge.ios{background:#0ea5e9;}.badge.aos{background:#16a34a;}
+  ol{margin:0;padding-left:4px;list-style:none;counter-reset:step;}
+  ol li{counter-increment:step;position:relative;padding:6px 0 6px 34px;font-size:14px;}
+  ol li::before{content:counter(step);position:absolute;left:0;top:6px;width:23px;height:23px;background:#2563eb;color:#fff;border-radius:50%;font-size:12.5px;font-weight:800;display:grid;place-items:center;}
+  ol.ios li::before{background:#0ea5e9;}ol.aos li::before{background:#16a34a;}
+  .tip{font-size:12.5px;color:#475569;background:#f8fafc;border-radius:10px;padding:10px 12px;margin-top:10px;}
+  .foot{text-align:center;font-size:11.5px;color:#94a3b8;margin-top:8px;line-height:1.7;}
+  .kbd{font-family:inherit;font-weight:800;background:#eef2f7;border-radius:6px;padding:1px 6px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="head">
+    <div class="logo">중진공</div>
+    <div><h1>KOSME 캘린더 설치 안내</h1><p>휴대폰 홈 화면에 앱처럼 추가하기</p></div>
+  </div>
+
+  <div class="card qr-card">
+    <img src="qr.png" alt="KOSME 캘린더 QR 코드" />
+    <div class="sub">📷 휴대폰 <b>카메라 앱</b>으로 QR을 비추면 바로 열려요</div>
+    <a class="url" href="https://kosme2412005.github.io/honam-calendar/">kosme2412005.github.io/honam-calendar</a>
+  </div>
+
+  <div class="warn">
+    <div class="t">⚠ 카카오톡으로 링크를 받았다면</div>
+    카톡 안에서 열면 <b>앱 설치가 안 됩니다.</b> 화면 위 안내의 <b>[기본 브라우저로 열기]</b>를 누르거나,
+    오른쪽 <span class="kbd">⋯</span> 메뉴 → <b>다른 브라우저로 열기</b>(아이폰은 <b>Safari로 열기</b>)를 누른 뒤 아래 단계를 진행하세요.<br>
+    👉 <b>가장 쉬운 방법: 위 QR을 카메라로 스캔</b>하면 이 문제가 없어요.
+  </div>
+
+  <div class="card">
+    <h2><span class="badge aos">안드로이드</span> 갤럭시 등</h2>
+    <ol class="aos">
+      <li>위 주소를 <b>크롬</b> 또는 <b>삼성 인터넷</b>으로 엽니다.</li>
+      <li>로그인하면 화면 위에 <b>“📲 앱 설치”</b> 버튼이 떠요. <b>탭 한 번</b>이면 설치 창이 나옵니다.</li>
+      <li><b>[설치]</b>를 누르면 끝! 홈 화면에 아이콘이 생깁니다.</li>
+    </ol>
+    <div class="tip">버튼이 안 보이면: 브라우저 <span class="kbd">⋮</span> 메뉴 → <b>앱 설치</b> 또는 <b>홈 화면에 추가</b></div>
+  </div>
+
+  <div class="card">
+    <h2><span class="badge ios">아이폰</span> Safari</h2>
+    <ol class="ios">
+      <li>위 주소를 <b>Safari</b>로 엽니다. (크롬 말고 Safari)</li>
+      <li>화면 <b>아래 가운데 공유 버튼</b> <span class="kbd">⬆️</span> 을 누릅니다.</li>
+      <li>메뉴를 내려 <b>“홈 화면에 추가”</b>를 선택 → <b>[추가]</b>.</li>
+    </ol>
+    <div class="tip">아이폰은 애플 정책상 자동 설치가 없어, 이 2~3단계가 유일한 방법이에요.</div>
+  </div>
+
+  <div class="card">
+    <h2>🔖 꼭 설치 안 해도 됩니다</h2>
+    <div style="font-size:13.5px;color:#334155;">설치가 번거로우면 <b>주소를 즐겨찾기</b>해 두고 쓰셔도 기능은 100% 똑같아요. 설치는 ‘홈 화면 바로가기’를 만들어 더 빨리 여는 것뿐입니다.</div>
+  </div>
+
+  <div class="foot">
+    중소벤처기업진흥공단 · KOSME 캘린더 (시범 운영)<br>
+    문의는 부서 담당자에게 알려주세요.
+  </div>
+
+</div>
+</body>
+</html>

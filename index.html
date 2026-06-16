@@ -58,6 +58,12 @@
   .room-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap;}
   .room-actions{display:flex;gap:8px;}
   .ios-hint{background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af;font-size:12.5px;padding:10px 14px;border-radius:11px;margin-bottom:12px;}
+  .install-guide{position:relative;background:linear-gradient(135deg,#eff6ff,#f0fdfa);border:1px solid #bfdbfe;border-radius:13px;padding:13px 42px 13px 15px;margin-bottom:12px;}
+  .install-guide .ig-title{font-size:13.5px;font-weight:800;color:#1e40af;line-height:1.5;}
+  .install-guide .ig-desc{font-size:12.5px;color:#334155;line-height:1.6;margin-top:4px;}
+  .install-guide .ig-act{margin-top:10px;}
+  .ig-x{position:absolute;top:8px;right:9px;width:24px;height:24px;border:none;background:transparent;color:#64748b;font-size:18px;line-height:1;border-radius:6px;cursor:pointer;}
+  .ig-x:hover{background:rgba(0,0,0,.06);}
   .room-card{background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);padding:18px;}
   .room-card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
   .room-card-head h3{margin:0;font-size:16px;font-weight:800;}
@@ -251,11 +257,13 @@
     <header class="room-head">
       <div class="brand"><div class="logo">중진공</div><div><h1>KOSME 캘린더</h1><p id="roomHello"></p></div></div>
       <div class="room-actions">
-        <button class="btn sm" id="installBtn" style="display:none">📲 앱 설치</button>
         <button class="btn sm" id="logoutBtn2">로그아웃</button>
       </div>
     </header>
-    <div id="iosHint" class="ios-hint hidden">📲 아이폰: 하단 <b>공유</b> → <b>홈 화면에 추가</b>로 앱처럼 쓸 수 있어요</div>
+    <div id="installGuide" class="install-guide hidden">
+      <button class="ig-x" id="igClose" title="닫기">×</button>
+      <div id="igBody"></div>
+    </div>
     <div class="room-card">
       <div class="room-card-head"><h3>부서 공간 선택</h3><div style="display:flex;gap:6px;"><button class="btn danger sm" id="delRoomBtn" style="display:none">－ 방 삭제</button><button class="btn primary sm" id="createRoomBtn">＋ 방 만들기</button></div></div>
       <div id="myRoomsWrap"></div>
@@ -546,6 +554,7 @@ async function showRoomView(){
   deleteMode=false;updateDelBtn();
   const isController=ADMIN_EMAILS.includes((session.user.email||'').toLowerCase());
   $('delRoomBtn').style.display=isController?'inline-flex':'none';
+  if(typeof updateInstallGuide==='function')updateInstallGuide();
   await loadRooms();
 }
 function updateDelBtn(){
@@ -922,9 +931,51 @@ $('crSave').onclick=async()=>{
   if(error){$('crMsg').textContent='실패: '+error.message;return;}
   closeOv('createRoomOverlay');myRoomIds.add(data);enterRoom(data,name);
 };
-window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredInstallPrompt=e;$('installBtn').style.display='inline-flex';});
-$('installBtn').onclick=async()=>{if(!deferredInstallPrompt)return;deferredInstallPrompt.prompt();try{await deferredInstallPrompt.userChoice;}catch(e){}deferredInstallPrompt=null;$('installBtn').style.display='none';};
-(function(){const ios=/iphone|ipad|ipod/i.test(navigator.userAgent);const standalone=window.navigator.standalone||window.matchMedia('(display-mode: standalone)').matches;if(ios&&!standalone)$('iosHint').classList.remove('hidden');})();
+/* ===== 설치 안내(상황 자동 감지) ===== */
+function envInfo(){
+  const ua=navigator.userAgent||'';
+  const isIOS=/iphone|ipad|ipod/i.test(ua)||(/Macintosh/i.test(ua)&&'ontouchend' in document);
+  const isAndroid=/android/i.test(ua);
+  const isKakao=/KAKAOTALK/i.test(ua);
+  const isInApp=isKakao||/NAVER\(inapp/i.test(ua)||/DaumApps|DaumDevice/i.test(ua)||/Line\//i.test(ua)||/FBAN|FBAV|FB_IAB|Instagram/i.test(ua);
+  const standalone=window.navigator.standalone||window.matchMedia('(display-mode: standalone)').matches;
+  return {ua,isIOS,isAndroid,isKakao,isInApp,standalone};
+}
+function updateInstallGuide(){
+  const g=$('installGuide'),b=$('igBody');if(!g||!b)return;
+  if(localStorage.getItem('igDismiss')==='1'){g.classList.add('hidden');return;}
+  const e=envInfo();
+  if(e.standalone){g.classList.add('hidden');return;}            // 이미 앱으로 실행 중
+  let html='';
+  if(e.isInApp){                                                 // 카톡/네이버 등 인앱 브라우저
+    if(e.isAndroid&&e.isKakao){
+      html=`<div class="ig-title">⚠ 지금 <b>카카오톡 안</b>에서 열려 있어요</div>`+
+        `<div class="ig-desc">여기선 앱 설치가 안 됩니다. 아래 버튼을 누르면 기본 브라우저로 다시 열려요.</div>`+
+        `<button class="btn primary sm ig-act" id="igExternal">기본 브라우저로 열기</button>`;
+    }else{
+      html=`<div class="ig-title">⚠ 지금 <b>${e.isKakao?'카카오톡':'다른 앱'} 안</b>에서 열려 있어요</div>`+
+        `<div class="ig-desc">앱 설치가 안 됩니다. 화면의 <b>⋯(더보기) 메뉴 → ${e.isIOS?'Safari로 열기':'다른 브라우저로 열기'}</b>를 눌러 다시 들어와 주세요.</div>`+
+        (e.isKakao?`<button class="btn sm ig-act" id="igExternal">열기 시도</button>`:'');
+    }
+  } else if(deferredInstallPrompt){                              // 안드로이드: 원터치 설치 가능
+    html=`<div class="ig-title">📲 홈 화면에 <b>앱으로 설치</b>하면 더 편해요</div>`+
+      `<div class="ig-desc">한 번 탭하면 설치 창이 떠요.</div>`+
+      `<button class="btn primary sm ig-act" id="igInstall">앱 설치</button>`;
+  } else if(e.isIOS){                                            // 아이폰: 수동 2단계 안내
+    html=`<div class="ig-title">📲 아이폰에서 <b>앱처럼</b> 쓰려면</div>`+
+      `<div class="ig-desc"><b>①</b> 화면 아래 <b>공유</b> 버튼(⬆️ 네모) → <b>②</b> <b>'홈 화면에 추가'</b> 선택</div>`;
+  } else if(e.isAndroid){                                        // 안드로이드인데 설치신호 미발생
+    html=`<div class="ig-title">📲 홈 화면에 <b>앱으로 설치</b>하기</div>`+
+      `<div class="ig-desc">브라우저 <b>메뉴(⋮)</b> → <b>'앱 설치'</b> 또는 <b>'홈 화면에 추가'</b>를 누르세요.</div>`;
+  } else { g.classList.add('hidden');return; }                  // 데스크탑 등은 숨김
+  b.innerHTML=html;g.classList.remove('hidden');
+  const inst=$('igInstall');if(inst)inst.onclick=async()=>{if(!deferredInstallPrompt)return;deferredInstallPrompt.prompt();try{await deferredInstallPrompt.userChoice;}catch(_){}deferredInstallPrompt=null;updateInstallGuide();};
+  const ext=$('igExternal');if(ext)ext.onclick=()=>{location.href='kakaotalk://web/openExternal?url='+encodeURIComponent(location.href);};
+}
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredInstallPrompt=e;updateInstallGuide();});
+window.addEventListener('appinstalled',()=>{deferredInstallPrompt=null;const g=$('installGuide');if(g)g.classList.add('hidden');});
+$('igClose').onclick=()=>{localStorage.setItem('igDismiss','1');$('installGuide').classList.add('hidden');};
+updateInstallGuide();
 
 /* 분류 설정(톱니): 이름변경·삭제·추가 */
 let editCats=[];
