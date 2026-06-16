@@ -58,7 +58,7 @@
   .room-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap;}
   .room-actions{display:flex;gap:8px;}
   .ios-hint{background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af;font-size:12.5px;padding:10px 14px;border-radius:11px;margin-bottom:12px;}
-  .install-guide{position:relative;background:linear-gradient(135deg,#eff6ff,#f0fdfa);border:1px solid #bfdbfe;border-radius:13px;padding:13px 42px 13px 15px;margin-bottom:12px;}
+  .install-guide{position:relative;width:calc(100% - 24px);max-width:460px;margin:10px auto 0;background:linear-gradient(135deg,#eff6ff,#f0fdfa);border:1px solid #bfdbfe;border-radius:13px;padding:13px 42px 13px 15px;box-shadow:0 4px 14px rgba(37,99,235,.10);z-index:60;}
   .install-guide .ig-title{font-size:13.5px;font-weight:800;color:#1e40af;line-height:1.5;}
   .install-guide .ig-desc{font-size:12.5px;color:#334155;line-height:1.6;margin-top:4px;}
   .install-guide .ig-act{margin-top:10px;}
@@ -228,6 +228,12 @@
 </head>
 <body>
 
+<!-- 설치 안내 배너(모든 화면 상단, 상황 자동 감지) -->
+<div id="installGuide" class="install-guide hidden">
+  <button class="ig-x" id="igClose" title="닫기">×</button>
+  <div id="igBody"></div>
+</div>
+
 <!-- 로그인 화면 -->
 <div id="authView" class="auth-wrap">
   <div class="auth-card">
@@ -260,10 +266,6 @@
         <button class="btn sm" id="logoutBtn2">로그아웃</button>
       </div>
     </header>
-    <div id="installGuide" class="install-guide hidden">
-      <button class="ig-x" id="igClose" title="닫기">×</button>
-      <div id="igBody"></div>
-    </div>
     <div class="room-card">
       <div class="room-card-head"><h3>부서 공간 선택</h3><div style="display:flex;gap:6px;"><button class="btn danger sm" id="delRoomBtn" style="display:none">－ 방 삭제</button><button class="btn primary sm" id="createRoomBtn">＋ 방 만들기</button></div></div>
       <div id="myRoomsWrap"></div>
@@ -541,7 +543,7 @@ $('logoutBtn').onclick=async()=>{await supa.auth.signOut();};
 supa.auth.onAuthStateChange((_e,sess)=>{
   session=sess;
   if(sess){ showRoomView(); }
-  else { if(channel){supa.removeChannel(channel);channel=null;} $('appView').classList.add('hidden'); $('roomView').classList.add('hidden'); $('authView').classList.remove('hidden'); }
+  else { if(channel){supa.removeChannel(channel);channel=null;} $('appView').classList.add('hidden'); $('roomView').classList.add('hidden'); $('authView').classList.remove('hidden'); if(typeof updateInstallGuide==='function')updateInstallGuide(); }
 });
 
 /* ===== 방 선택 ===== */
@@ -609,6 +611,7 @@ async function enterRoom(roomId,roomName){
   currentRoomId=roomId;currentRoomName=roomName;
   state={members:[],events:[]};activeCats=new Set(Object.keys(CATEGORIES));activeMembers=new Set();curView='cal';viewDate=new Date();
   $('roomView').classList.add('hidden');$('appView').classList.remove('hidden');
+  if(typeof updateInstallGuide==='function')updateInstallGuide();
   $('roomBadge').textContent='🏷 '+roomName;
   $('availDate').value=toYMD(new Date());
   await Promise.all([loadMembers(),loadEvents(),loadRoomCategories()]);
@@ -944,6 +947,7 @@ function envInfo(){
 function updateInstallGuide(){
   const g=$('installGuide'),b=$('igBody');if(!g||!b)return;
   if(localStorage.getItem('igDismiss')==='1'){g.classList.add('hidden');return;}
+  const av=$('appView');if(av&&!av.classList.contains('hidden')){g.classList.add('hidden');return;} // 캘린더 사용 중엔 숨김
   const e=envInfo();
   if(e.standalone){g.classList.add('hidden');return;}            // 이미 앱으로 실행 중
   let html='';
@@ -954,8 +958,8 @@ function updateInstallGuide(){
         `<button class="btn primary sm ig-act" id="igExternal">기본 브라우저로 열기</button>`;
     }else{
       html=`<div class="ig-title">⚠ 지금 <b>${e.isKakao?'카카오톡':'다른 앱'} 안</b>에서 열려 있어요</div>`+
-        `<div class="ig-desc">앱 설치가 안 됩니다. 화면의 <b>⋯(더보기) 메뉴 → ${e.isIOS?'Safari로 열기':'다른 브라우저로 열기'}</b>를 눌러 다시 들어와 주세요.</div>`+
-        (e.isKakao?`<button class="btn sm ig-act" id="igExternal">열기 시도</button>`:'');
+        `<div class="ig-desc">앱 설치가 안 됩니다. 아래 버튼을 누르거나, 화면의 <b>⋯(더보기) 메뉴 → ${e.isIOS?'Safari로 열기':'다른 브라우저로 열기'}</b>를 눌러 다시 들어와 주세요.</div>`+
+        (e.isKakao?`<button class="btn primary sm ig-act" id="igExternal">${e.isIOS?'Safari로 열기':'기본 브라우저로 열기'}</button>`:'');
     }
   } else if(deferredInstallPrompt){                              // 안드로이드: 원터치 설치 가능
     html=`<div class="ig-title">📲 홈 화면에 <b>앱으로 설치</b>하면 더 편해요</div>`+
