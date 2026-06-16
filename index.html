@@ -766,7 +766,7 @@ function buildCatPicker(){
 }
 function renderEvtMembers(){
   const box=$('evtMembers');box.innerHTML='';
-  const editable=isAdmin&&!evtReadOnly;               // 관리자만 여러 명 토글 가능
+  const editable=!evtReadOnly;                        // 수정 가능하면 누구나 담당자 토글
   const listMembers=editable?state.members:state.members.filter(m=>pickedMembers.has(m.id));
   if(!listMembers.length){box.innerHTML='<span style="color:#9aa3af;font-size:12px">-</span>';return;}
   listMembers.forEach(m=>{
@@ -786,7 +786,8 @@ function openEvent(id,preset){
   if(state.members.length==0){alert('먼저 [부서원]에서 부서원을 추가하세요.');return;}
   if(!isAdmin&&!myMemberId){alert('본인 부서원 정보를 찾지 못했습니다. 다시 로그인해 주세요.');return;}
   const e=id?state.events.find(x=>x.id==id):null;
-  const canEdit=isAdmin||!e||e.member_id===myMemberId;
+  /* 같은 방 부서원이면 누구나 일정 수정 가능(타인 일정에 본인 추가 등). 삭제만 작성자/관리자 전용 */
+  const canEdit=isAdmin||!!myMemberId;
   evtReadOnly=!canEdit;
   $('evtModalTitle').textContent=e?(canEdit?'일정 수정':'일정 보기 (열람 전용)'):'일정 추가';
   $('evtId').value=e?e.id:'';
@@ -805,7 +806,7 @@ function openEvent(id,preset){
   $('evtMemo').value=e?(e.memo||''):'';
   ['evtTitle','evtLocation','evtStart','evtEnd','evtStartTime','evtEndTime','evtMemo'].forEach(idd=>$(idd).disabled=evtReadOnly);
   $('evtSave').style.display=evtReadOnly?'none':'inline-flex';
-  $('evtDelete').style.display=(e&&!evtReadOnly)?'inline-flex':'none';
+  $('evtDelete').style.display=(e&&(isAdmin||e.member_id===myMemberId))?'inline-flex':'none';
   showOv('eventOverlay');
 }
 $('evtSave').onclick=async()=>{
@@ -817,6 +818,8 @@ $('evtSave').onclick=async()=>{
   /* 담당자: 선택한 여러 명(비관리자는 토글 불가라 본인/기존값 유지). 대표 member_id=첫 번째 */
   let memIds=[...pickedMembers];
   if(!memIds.length)return alert('부서원을 1명 이상 선택하세요');
+  /* 신규 일정은 서버 정책상 본인이 대표(member_id)여야 함 → 비관리자는 본인을 맨 앞으로 */
+  if(!$('evtId').value&&!isAdmin&&myMemberId){memIds=[myMemberId,...memIds.filter(x=>x!==myMemberId)];}
   const payload={room_id:currentRoomId,member_id:memIds[0],member_ids:memIds,type:pickedCat,sub_type:null,
     title,location:$('evtLocation').value.trim()||'연수원',start_date:s,end_date:en,time_mode:pickedTime,
     start_time:range?$('evtStartTime').value:null,end_time:range?$('evtEndTime').value:null,
