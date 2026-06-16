@@ -130,7 +130,8 @@
   .evt.cancelled{text-decoration:line-through;opacity:.5;}
   .evt .loc{font-size:9.5px;opacity:.85;}
   .cat-tag{display:inline-block;font-family:'Malgun Gothic','맑은 고딕',sans-serif;font-weight:800;font-size:9.5px;color:#111;background:rgba(255,255,255,.92);padding:0 4px;border-radius:4px;margin-right:4px;letter-spacing:-.3px;line-height:1.5;}
-  .evt-title{font-size:0.85em;}/* 제목은 분류·부서원보다 한 단계 작게(옛 @장소 크기) */
+  .evt-mem{display:block;}/* 부서원은 한 명씩 각자 줄 단독 */
+  .evt-title{display:block;font-size:0.85em;}/* 제목은 부서원 줄 다음에 단독, 분류·부서원보다 한 단계 작게(옛 @장소 크기) */
   .evt .cat-tag{display:block;width:fit-content;margin:0 0 2px;}/* 분류는 첫 줄 단독 → 부서원 이름은 다음 줄부터 */
   .evt:hover{filter:brightness(1.07);}
   .more{font-size:10.5px;color:var(--muted);font-weight:700;padding:1px 6px;}
@@ -674,8 +675,9 @@ function makeChip(e,ymd){
   const c=cat(e.type);const chip=document.createElement('div');
   chip.className='evt'+(e.status=='tentative'?' tentative':'')+(e.status=='cancelled'?' cancelled':'');
   chip.style.background=memberColor(e.member_id);
-  /* 캘린더 칩에는 분류 + 담당자(복수) + 제목만 (시간·장소는 상세 팝업에서) */
-  chip.innerHTML=`<span class="cat-tag">${c.label}</span>${evMemberNames(e)} <span class="evt-title">${e.title}</span>`;
+  /* 캘린더 칩: 분류 → 부서원(각 한 줄) → 제목, 각각 줄바꿈 (시간·장소는 상세 팝업에서) */
+  const memHtml=evMembers(e).map(memberName).filter(Boolean).map(n=>`<span class="evt-mem">${n}</span>`).join('');
+  chip.innerHTML=`<span class="cat-tag">${c.label}</span>${memHtml}<span class="evt-title">${e.title}</span>`;
   chip.title=`[${c.label}] ${evMemberNames(e)} · ${e.title}\n${e.start_date}~${e.end_date} (${STATUS[e.status]})\n장소:${e.location||'-'}${e.memo?'\n'+e.memo:''}`;
   chip.onclick=ev=>{ev.stopPropagation();openDay(ymd);};return chip;
 }
