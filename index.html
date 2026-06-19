@@ -540,10 +540,18 @@ $('signupBtn').onclick=async()=>{
 };
 $('logoutBtn').onclick=async()=>{await supa.auth.signOut();};
 
-supa.auth.onAuthStateChange((_e,sess)=>{
+supa.auth.onAuthStateChange((ev,sess)=>{
   session=sess;
-  if(sess){ showRoomView(); }
-  else { if(channel){supa.removeChannel(channel);channel=null;} $('appView').classList.add('hidden'); $('roomView').classList.add('hidden'); $('authView').classList.remove('hidden'); if(typeof updateInstallGuide==='function')updateInstallGuide(); }
+  if(sess){
+    // 이 콜백은 로그인 외에 토큰 자동 갱신(TOKEN_REFRESHED, 약 30분 주기)·
+    // 앱 포커스 복귀 시에도 호출된다. 이미 방에 입장해 일정표를 보고 있거나
+    // 방 선택 화면에 있다면 화면을 처음으로 되돌리지 않는다.
+    if(currentRoomId) return;                                          // 방 안 → 일정표 그대로 유지
+    if(!$('appView').classList.contains('hidden')) return;             // 앱 화면이 떠 있으면 유지
+    if(!$('roomView').classList.contains('hidden')) return;            // 방 선택 화면이면 유지
+    showRoomView();
+  }
+  else { if(channel){supa.removeChannel(channel);channel=null;} currentRoomId=null; $('appView').classList.add('hidden'); $('roomView').classList.add('hidden'); $('authView').classList.remove('hidden'); if(typeof updateInstallGuide==='function')updateInstallGuide(); }
 });
 
 /* ===== 방 선택 ===== */
